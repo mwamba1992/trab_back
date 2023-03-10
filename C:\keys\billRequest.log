@@ -1,0 +1,49 @@
+2020-04-06 14:00:56,357 [http-nio-9095-exec-1] INFO  (trab.bill.request createUSer:297)  - **Request To Gepg***<?xml version="1.0" encoding="UTF-16"?><Gepg>
+    <gepgBillSubReq>
+        <BillHdr>
+            <SpCode>SP702</SpCode>
+            <RtrRespFlg>true</RtrRespFlg>
+        </BillHdr>
+        <BillTrxInf>
+            <BillId>TRAB11</BillId>
+            <SubSpCode>1001</SubSpCode>
+            <SpSysId>TRAB001</SpSysId>
+            <BillAmt>1000</BillAmt>
+            <MiscAmt>0</MiscAmt>
+            <BillExprDt>2020-04-20T14:00:56</BillExprDt>
+            <PyrId>AZAM  (CO) </PyrId>
+            <PyrName>AZAM  (CO) </PyrName>
+            <BillDesc>Notice for Tin: (989)-(898)-(989) of: AZAM  (CO) </BillDesc>
+            <BillGenDt>2020-04-06T14:00:56</BillGenDt>
+            <BillGenBy>1</BillGenBy>
+            <BillApprBy>joel joel</BillApprBy>
+            <PyrCellNum>255716202112</PyrCellNum>
+            <PyrEmail>joelgaitan1992@gmail.com</PyrEmail>
+            <Ccy>TZS</Ccy>
+            <BillEqvAmt>1000.0</BillEqvAmt>
+            <RemFlag>false</RemFlag>
+            <BillPayOpt>3</BillPayOpt>
+            <BillItems>
+                <BillItem>
+                    <BillItemRef>NOTICE-1586170856109</BillItemRef>
+                    <UseItemRefOnPay>N</UseItemRefOnPay>
+                    <BillItemAmt>1000</BillItemAmt>
+                    <BillItemEqvAmt>1000.0</BillItemEqvAmt>
+                    <BillItemMiscAmt>0</BillItemMiscAmt>
+                    <GfsCode>14036943</GfsCode>
+                </BillItem>
+            </BillItems>
+        </BillTrxInf>
+    </gepgBillSubReq>
+    <gepgSignature>YDbZGQA0JqzOeMUUc6HuuYdp08dmewzAlHnbPXQCS7UDRDN6VIbIKsaUGuR8dADPoqIdE/Mpb2gc2D4S8etr4SyF8yq8OtR4xnhUARLdBCXWfxjSTqOSTFuK8gBdpRa/Oq5ifl3a87X7Wbgr6DnvXYiKG8ykp2I4kBZKTeKsWODV5hkOt3EnQCGhiL/QNHcERyOQMF4khrWTiUqUdq09N3+NxksNJhGhgNz6Z+7wrpHu3sH88inxVj4pWQ1aulcQwB6juaX8AwS3bIXTR5FV2raultM1BNytYz9PxaeO2po2t6D1SecoEyPckqPxUQ55yDaVazcDYeQsbkgVq9pl/Q==</gepgSignature>
+</Gepg>
+
+
+2020-04-06 14:00:56,542 [http-nio-9095-exec-1] INFO  (trab.bill.request createUSer:307)  - *****bill response***<?xml version="1.0" encoding="UTF-16"?><Gepg>
+    <gepgBillSubReqAck>
+        <TrxStsCode>7101</TrxStsCode>
+    </gepgBillSubReqAck>
+    <gepgSignature>QxabtcSqgr08gka7J/2ZK8pc0e9pHiwUw8eHw1efi7+wGUP1uaEbish96NLth6u/UbkJEpB93HAdVWBGt6QZPHJc/WAgUUvHTgloSqrsd2TFVd3IEP3E2TJUOKc+YqS/9vaBGLKNTxthvN1JWejY7Ubvvv5i2mzh3YtCYXfkrgMZcFRwmmCkCN9mzPJflsPh7E6yQH21Yr5BY6oLBcMCITiFHXs3UgEKx0EEAPnWAm+YlzLKRJ6hGBM1HjTNfABLQ1ee/qvf1OvyWYKIMqE66N6QVAnmJU2MXUN3IlV0LiR56h68TKkdeqXI2PjulrVKs/RbWYEDVhv40Yj/9o6BOQ==</gepgSignature>
+</Gepg>
+
+

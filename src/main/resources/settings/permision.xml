@@ -1,0 +1,70 @@
+<PermissionDetails>
+    <PermissionCategory>
+        <Name>BILLING</Name>
+        <Active>true</Active>
+
+        <Permissions>
+            <Name>BILL_MANAGER</Name>
+            <ServiceName>termis-billing-service</ServiceName>
+            <DisplayName>Manage Bill</DisplayName>
+            <Active>true</Active>
+            <Deleted>false</Deleted>
+        </Permissions>
+
+        <Permissions>
+            <Name>MANAGE_PAYMENT</Name>
+            <ServiceName>termis-billing-service</ServiceName>
+            <DisplayName>Manage Payment</DisplayName>
+            <Active>true</Active>
+            <Deleted>false</Deleted>
+        </Permissions>
+
+        <Permissions>
+            <Name>MANAGE_NOTICE</Name>
+            <ServiceName>termis-billing-service</ServiceName>
+            <DisplayName>Manage Notice</DisplayName>
+            <Active>true</Active>
+            <Deleted>false</Deleted>
+        </Permissions>
+
+        <Permissions>
+            <Name>MANAGE_STATEMENT</Name>
+            <ServiceName>termis-billing-service</ServiceName>
+            <DisplayName>Manage Statement</DisplayName>
+            <Active>true</Active>
+            <Deleted>false</Deleted>
+        </Permissions>
+
+        <Permissions>
+            <Name>MANAGE_APPLICATION</Name>
+            <ServiceName>termis-billing-service</ServiceName>
+            <DisplayName>Manage Application</DisplayName>
+            <Active>true</Active>
+            <Deleted>false</Deleted>
+        </Permissions>
+
+        <Permissions>
+            <Name>MANAGE_OTHER_BILLS</Name>
+            <ServiceName>termis-billing-service</ServiceName>
+            <DisplayName>Manage Other Bills</DisplayName>
+            <Active>true</Active>
+            <Deleted>false</Deleted>
+        </Permissions>
+
+        <Permissions>
+            <Name>MANAGE_REPORTS</Name>
+            <ServiceName>termis-billing-service</ServiceName>
+            <DisplayName>Report Manager</DisplayName>
+            <Active>true</Active>
+            <Deleted>false</Deleted>
+        </Permissions>
+
+        <Permissions>
+            <Name>SYSTEM_SETTINGS</Name>
+            <ServiceName>termis-billing-service</ServiceName>
+            <DisplayName>Settings Manager</DisplayName>
+            <Active>true</Active>
+            <Deleted>false</Deleted>
+        </Permissions>
+    </PermissionCategory>
+</PermissionDetails>

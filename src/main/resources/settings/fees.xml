@@ -1,0 +1,72 @@
+<fiis>
+    <fii>
+        <id>NOTICE</id>
+        <amount>10000</amount>
+        <desc>Fees Of Lodging Notice of Appeal</desc>
+        <code>142202460236</code>
+    </fii>
+    <fii>
+        <id>STATEMENT</id>
+        <amount>100000</amount>
+        <desc>Fees For Lodging Statement Of Appeal</desc>
+        <code>142202460149</code>
+    </fii>
+
+    <fii>
+        <id>APPLICATION</id>
+        <amount>30000</amount>
+        <desc>Fees For Lodging Applications</desc>
+        <code>142202460231</code>
+    </fii>
+
+    <fii>
+        <id>WITNESS</id>
+        <amount>10000</amount>
+        <desc>Fees For Calling A Witness</desc>
+        <code>142202540093</code>
+    </fii>
+
+    <fii>
+        <id>EVIDENCE</id>
+        <amount>10000</amount>
+        <desc>Fees For Calling Additional Evidence</desc>
+        <code>142202460239</code>
+    </fii>
+
+    <fii>
+        <id>DECREE</id>
+        <amount>10000</amount>
+        <desc>Fee For preparation of decree/order</desc>
+        <code>142202460228</code>
+    </fii>
+
+
+    <fii>
+        <id>ANNEXTURE</id>
+        <amount>5000</amount>
+        <desc>Annextures to the pleadings</desc>
+        <code>142202460239</code>
+    </fii>
+
+    <fii>
+        <id>APPLICATION/DECREE</id>
+        <amount>20000</amount>
+        <desc>Fee for Application of execution of decree/order</desc>
+        <code>142202460228</code>
+    </fii>
+
+
+    <fii>
+        <id>PERUSAL</id>
+        <amount>5000</amount>
+        <desc>Perusal fees</desc>
+        <code>142201540041</code>
+    </fii>
+
+</fiis>
+
+
+
+
+
+

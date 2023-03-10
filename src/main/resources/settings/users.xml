@@ -1,0 +1,15 @@
+<Users>
+    <UserDetail>
+        <Name>Termis Admin</Name>
+        <Email>admin@termis.go.tz</Email>
+        <Password>Termis@123456*</Password>
+        <Sex>Male</Sex>
+    </UserDetail>
+
+    <UserDetail>
+        <Name>Trab Admin</Name>
+        <Email>admin@trab.go.tz</Email>
+        <Password>Trab@123456*</Password>
+        <Sex>Male</Sex>
+    </UserDetail>
+</Users>

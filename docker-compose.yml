@@ -1,0 +1,71 @@
+# Docker Compose file Reference (https://docs.docker.com/compose/compose-file/)
+version: "3.3"
+
+
+# Define services
+services:
+
+  rabbitmq:
+    image: rabbitmq:management
+    environment:
+      RABBITMQ_DEFAULT_USER: "trab"
+      RABBITMQ_DEFAULT_PASS: "trab123456"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - /Users/amtz/gepg/docker-db:/var/lib/rabbitmq
+      - ./definitions.json:/opt/definitions.json:ro
+      - ./rabbitmq.config:/etc/rabbitmq/rabbitmq.config:ro
+  db:
+    image: mysql:5.7
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - /Users/amtz/gepg/db/db_init.sql:/docker-entrypoint-initdb.d/db_init.sql
+      - /Users/amtz/gepg/docker-db:/var/lib/mysql
+
+  # Trab backend service
+  trab-server:
+    restart: always
+    image: trab_backend
+    ports:
+      - "9094:9094" # Forward the exposed port 9094 on the container to port 9094 on the host machine
+    depends_on:
+      - db # This service depends on mysql. Start that first.
+      - rabbitmq
+    environment: # Pass environment variables to the service
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/trab?useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING.RABBITMQ.HOST: rabbitmq
+    volumes:
+    - /Users/amtz/gepg/testing_keys/:/Users/amtz/gepg/testing_keys/
+    - /Users/amtz/gepg/uploads/:/Users/amtz/gepg/uploads/
+
+
+  # Trat backend service
+  trat-server:
+    image: trat_backend
+    ports:
+      - "9093:9093" # Forward the exposed port 9093 on the container to port 9093 on the host machine
+    depends_on:
+      - db # This service depends on mysql. Start that first.
+    environment: # Pass environment variables to the service
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/trat?useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    volumes:
+      - /Users/amtz/gepg/testing_keys/:/Users/amtz/gepg/testing_keys/
+
+
+## Volumes
+#volumes:
+#  db-data:
+
+
+

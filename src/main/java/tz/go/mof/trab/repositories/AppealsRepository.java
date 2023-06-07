@@ -2,9 +2,7 @@ package tz.go.mof.trab.repositories;
 
 import java.util.Date;
 import java.util.List;
-
 import javax.transaction.Transactional;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Modifying;
@@ -14,7 +12,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import tz.go.mof.trab.models.Appeals;
-import tz.go.mof.trab.models.Notice;
+
 
 
 @CrossOrigin("*")
@@ -87,8 +85,17 @@ public interface AppealsRepository extends PagingAndSortingRepository<Appeals, L
 
 	Page<Appeals> findAppealsByDateOfFillingBetweenAndTax_Id(Date startDate, Date endDate,String taxId, Pageable pageable);
 
-	@Query(value = "select count(*) from Appeals ap where  ap.summons is not null AND ap.decidedDate is null")
+	@Query(value = "select count(*) from Appeals ap where  ap.decidedDate is null")
 	int findPendingForJudgement();
 
+
+	@Query(value = "select a from Appeals a where a.decidedDate is null")
+	List<Appeals> findAllPendingAppeals();
+
+
+	@Query(value = "select a from Appeals  a where a.createdBy = 'System Created'")
+	Page<Appeals> findAllSystemCreatedAppeals(Pageable pageable);
+
+	List<Appeals> findAppealsByAppealNoAndTax_Id(String appealNo, String taxId);
 	}
 

@@ -46,7 +46,6 @@ public class ApplicationRegister {
 
 	private String decideBy;
 
-	@JsonIgnore
 	@ManyToOne(optional = false)
 	@JoinColumn(name = "taxId", nullable = false)
 	private TaxType taxes;;

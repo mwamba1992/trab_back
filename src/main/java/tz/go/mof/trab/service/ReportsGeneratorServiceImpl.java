@@ -141,7 +141,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             parameters.put("dateFrom", dateFrom);
 
 
-            File billReportTemplate = new File(REPORT_DESIGN_PATH + "reconFileReportLandScape.jrxml");
+            File billReportTemplate = new File(REPORT_DESIGN_PATH + "chat_gpt.jrxml");
             JasperReport jasperReport = JasperCompileManager.compileReport(billReportTemplate.getAbsolutePath());
             JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parameters, source);
 
@@ -638,7 +638,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
     }
 
     @Override
-    public Response<String> getPath(String format, String id) throws JRException, IOException {
+    public Response<String> getPath(String format, String id)  {
         String storagePath = uploadingDir;
         System.out.println("storage: " + storagePath);
         System.out.println("filename: " + id);

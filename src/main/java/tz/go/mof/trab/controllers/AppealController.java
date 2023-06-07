@@ -7,7 +7,10 @@ import java.math.BigInteger;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import tz.go.mof.trab.config.userextractor.LoggedUser;
 import tz.go.mof.trab.models.*;
 import tz.go.mof.trab.models.Currency;
@@ -56,11 +58,26 @@ public class AppealController {
     private final PaymentRepository paymentRepository;
     private final AppealServedByRepository appealServedByRepository;
 
+    private RegionRepository regionRepository;
+
+
+    private TaxTypeRepository taxTypeRepository;
+
+    @Autowired
+    void setRegionRepository(RegionRepository regionRepository) {
+        this.regionRepository = regionRepository;
+    }
+
+    @Autowired
+    void setTaxTypeRepository(TaxTypeRepository taxTypeRepository) {
+        this.taxTypeRepository = taxTypeRepository;
+    }
+
     AppealController(AppealsService appealService, AppealsAmountRepository appealsAmountRepository,
                      CurrencyService currencyService, LoggedUser loggedUser, BillItemRepository billItemRepository,
                      AppealStatusTrendRepository appealStatusTrendRepository, AppealsRepository appealsRepository,
                      NoticeRepository noticeRepository, GlobalMethods globalMethods, PaymentRepository paymentRepository,
-                     AppealServedByRepository appealServedByRepository, SummonsRepository summonsRepository){
+                     AppealServedByRepository appealServedByRepository){
          this.appealService = appealService;
          this.appealAmountRepository = appealsAmountRepository;
          this.currencyService = currencyService;
@@ -85,6 +102,8 @@ public class AppealController {
     @ResponseBody
     public Response<Appeals> editAppealAlone(@RequestBody Map<String, String> req) {
 
+        TrabHelper.print(req);
+
         Response<Appeals> res = new Response<>();
         try {
             ObjectMapper mapper = new ObjectMapper();
@@ -93,7 +112,7 @@ public class AppealController {
             List<Map<String, String>> amountList;
 
             amountList = mapper.readValue(req.get("amountList"), List.class);
-            Appeals app = appealsRepository.findByappealNo(req.get("appNo"));
+            Appeals app = appealsRepository.findById(Long.valueOf(req.get("appealId"))).get();
 
             Notice notice = noticeRepository.findBynoticeNo(app.getNoticeNumber());
 
@@ -102,11 +121,13 @@ public class AppealController {
 
             app.setAssNo(req.get("assNo"));
             app.setBankNo(req.get("bankNo"));
+            app.setNatOfBus(req.get("natOf"));
             app.setBillNo(req.get("billNo"));
             app.setTaxedOff(req.get("taxedOffice"));
             app.setNatureOfAppeal(req.get("natureOfAppeal"));
             app.setUpdatedAt(LocalDateTime.now());
             app.setUpdatedBy(loggedUser.getInfo().getName());
+
 
             appealAmountRepository.deleteAppealAmounts(app.getAppealId());
 
@@ -153,7 +174,9 @@ public class AppealController {
         Response<Appeals> res = new Response<>();
         try {
 
-            Appeals app = appealsRepository.findByappealNo(req.get("appealId"));
+            TrabHelper.print(req);
+
+            Appeals app = appealsRepository.findByAppealNoAndTaxType(req.get("appealId"), req.get("taxId"));
             app.setDecidedDate(new SimpleDateFormat("yyyy-MM-DD").parse(req.get("desicionDate").split("T")[0]));
             app.setSummaryOfDecree(req.get("remarks"));
             app.setStatusTrend(appealStatusTrendRepository.findAppealStatusTrendByAppealStatusTrendName(req.get("status")));
@@ -161,7 +184,12 @@ public class AppealController {
             app.setProcedingStatus(req.get("status"));
             app.setWonBy(req.get("wonBy"));
             app.setCopyOfJudgement(req.get("fileName"));
+
+            if(req.get("judge").isEmpty() || req.get("judge") == null){
             app.setDecidedBy(app.getSummons().getJud().getName());
+            }else{
+                app.setDecidedBy(req.get("judge"));
+            }
 
 
             String filePath = "";
@@ -543,6 +571,44 @@ public class AppealController {
                 return appealsRepository.findAppealsByDateOfFillingBetweenAndTax_Id(start, end, req.get("tax"), pageable);
             }
 
+    }
+
+
+    @PostMapping(path = "load-backlog", produces = "application/json")
+    @ResponseBody
+    public Response uploadLogBack(@RequestBody Map<String, String> requestBody){
+        TrabHelper.print(requestBody);
+        return appealService.uploadAppealManually(requestBody);
+    }
+
+    @PostMapping(path = "load-backlog-appeal", produces = "application/json")
+    @ResponseBody
+    public Response uploadLogBackAppeal(@RequestBody Map<String, String> requestBody) {
+
+
+        TrabHelper.print(requestBody);
+
+
+        Region region = regionRepository.findById(requestBody.get("region")).get();
+        String appealNo = region.getCode() + "." + requestBody.get("appealNo");
+
+        System.out.println("Appeal No"+ appealNo);
+        TaxType taxType = taxTypeRepository.findById(requestBody.get("tax")).get();
+        System.out.println("Taxes"+ taxType.getTaxName());
+
+        Response response = new Response();
+
+        if (appealsRepository.findAppealsByAppealNoAndTax_Id(appealNo, requestBody.get("tax")).size()>0) {
+            response = new Response();
+            response.setCode(ResponseCode.FAILURE);
+            response.setDescription("Appeal already exist");
+            response.setStatus(false);
+            return response;
+        }
+        response.setCode(ResponseCode.SUCCESS);
+        response.setDescription("Appeal added successfully");
+        response.setStatus(true);
+        return response;
     }
 }
 

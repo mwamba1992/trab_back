@@ -80,8 +80,8 @@ public class BillController {
 
         String signedString = null;
 
-        if (globalMethods.isFileExist(gepgKeyFilePath) && globalMethods.isNullOREmptyString(gepgPassphrase)
-                && globalMethods.isNullOREmptyString(gepgAlias)) {
+        if (globalMethods.isFileExist(gepgKeyFilePath) && !globalMethods.isNullOREmptyString(gepgPassphrase)
+                && !globalMethods.isNullOREmptyString(gepgAlias)) {
 
             ackRespString = globalMethods.getStringWithinXmlTag(ackRespString, "gepgBillSubRespAck");
             signedString = globalSignature.CreateSignature(ackRespString, gepgPassphrase, gepgAlias, gepgKeyFilePath);

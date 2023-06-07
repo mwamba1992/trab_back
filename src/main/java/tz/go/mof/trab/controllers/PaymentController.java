@@ -147,8 +147,8 @@ public class PaymentController {
 					response.setTrxStsCode("7101");
 					ackRespString = globalMethod.convertXmlToString(JAXBContext.newInstance(PaymentResponse.class),
 							response);
-					if (globalMethod.isFileExist(gepgKeyFilePath) && globalMethod.isNullOREmptyString(gepgPassphrase)
-							&& globalMethod.isNullOREmptyString(gepgAlias)) {
+					if (globalMethod.isFileExist(gepgKeyFilePath) && !globalMethod.isNullOREmptyString(gepgPassphrase)
+							&& !globalMethod.isNullOREmptyString(gepgAlias)) {
 						ackRespString = globalMethod.getStringWithinXmlTag(ackRespString, "gepgPmtSpInfoAck");
 						signedString = globalSignature.CreateSignature(ackRespString, gepgPassphrase, gepgAlias,
 								gepgKeyFilePath);

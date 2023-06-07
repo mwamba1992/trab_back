@@ -9,6 +9,8 @@ import java.util.Set;
 
 public interface AppealsService {
     Response<Appeals> createAppeal(Map<String, String> request);
-    public  Set saveAmount(Set appealAmountSet, List<Map<String, String>> amountList);
+    Set saveAmount(Set appealAmountSet, List<Map<String, String>> amountList);
+
+    Response uploadAppealManually(Map<String, String> request);
 
 }

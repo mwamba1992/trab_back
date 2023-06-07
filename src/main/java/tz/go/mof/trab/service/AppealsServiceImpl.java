@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import sun.jvm.hotspot.ui.SAEditorPane;
 import tz.go.mof.trab.config.userextractor.LoggedUser;
 import tz.go.mof.trab.models.*;
 import tz.go.mof.trab.models.Currency;
@@ -12,6 +13,7 @@ import tz.go.mof.trab.utils.*;
 import tz.go.mof.trab.utils.Response;
 import javax.transaction.Transactional;
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -42,6 +44,20 @@ public class AppealsServiceImpl implements AppealsService {
     private final LoggedUser loggedUser;
     private final GfsService gfsService;
     private final BillItemRepository billItemRepository;
+
+    private RegionRepository regionRepository;
+
+    private TaxTypeRepository taxTypeRepository;
+
+    @Autowired
+    void setTaxTypeRepository(TaxTypeRepository taxTypeRepository) {
+        this.taxTypeRepository = taxTypeRepository;
+    }
+
+    @Autowired
+    void setRegionRepository(RegionRepository regionRepository) {
+        this.regionRepository = regionRepository;
+    }
 
     private final ManualAppealsSequenceRepository manualAppealsSequenceRepository;
 
@@ -354,6 +370,62 @@ public class AppealsServiceImpl implements AppealsService {
         calendar.add(Calendar.DAY_OF_YEAR, noOfDays);
         Date date = calendar.getTime();
         this.billExpireDate = date;
+    }
+
+
+    public Response uploadAppealManually(Map<String, String> request){
+        Appeals appeals = new Appeals();
+        Response response = new Response<>();
+        List < Map < String, String >> amountList;
+        ObjectMapper mapper = new ObjectMapper();
+        Set AppealAmountSet = new HashSet();
+
+        try {
+            Region region = regionRepository.findById(request.get("region")).get();
+            String appealNo = region.getCode() + "." + request.get("appealNo");
+            TaxType taxType = taxTypeRepository.findById(request.get("tax")).get();
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+
+
+            if (appealsRepository.findAppealsByAppealNoAndTax_Id(appealNo,
+                    request.get("tax")).size()>0) {
+
+                response = new Response();
+                response.setCode(ResponseCode.FAILURE);
+                response.setDescription("Appeal already exist");
+                response.setStatus(false);
+                return response;
+            }
+
+            appeals.setAppealNo(appealNo);
+            appeals.setAppellantName(request.get("appellantName"));
+
+            appeals.setDateOfFilling(simpleDateFormat.parse(request.get("dateFilling").split("T")[0]));
+            appeals.setDecidedDate(simpleDateFormat.parse(request.get("decidedDate").split("T")[0]));
+            appeals.setStatusTrend(appealStatusTrendRepository.findAppealStatusTrendByAppealStatusTrendName(request.get("statusTrend")));
+            appeals.setDecidedBy(request.get("decidedBy"));
+            appeals.setTax(taxTypeService.findById(request.get("tax")));
+            appeals.setSummaryOfDecree(request.get("summary"));
+            appeals.setTinNumber(request.get("tin"));
+            appeals.setPhone(request.get("phone"));
+            appeals.setNatureOfAppeal(request.get("nature"));
+            appeals.setBillId(null);
+            appeals.setCreatedBy("System Created");
+
+
+            amountList = mapper.readValue(request.get("amountList"), List.class);
+            AppealAmountSet = saveAmount(AppealAmountSet, amountList);
+            appeals.setAppealAmount(AppealAmountSet);
+            appealsRepository.save(appeals);
+
+            response.setDescription("Successful Uploaded");
+            response.setCode(ResponseCode.SUCCESS);
+        }catch (Exception e){
+            e.printStackTrace();
+            response.setCode(ResponseCode.FAILURE);
+            response.setDescription("Failed to load appeal");
+        }
+        return response;
     }
 
 }

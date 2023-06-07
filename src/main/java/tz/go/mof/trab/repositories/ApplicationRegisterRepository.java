@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 
 import tz.go.mof.trab.models.Appeals;
 import tz.go.mof.trab.models.ApplicationRegister;
+import tz.go.mof.trab.models.Notice;
 
 import java.util.Date;
 
@@ -35,6 +36,8 @@ public interface ApplicationRegisterRepository  extends PagingAndSortingReposito
 	Page<ApplicationRegister> findApplicationRegisterByDateOfFillingBetween(Date startDate, Date endDate, Pageable pageable);
 
 	Page<ApplicationRegister> findApplicationRegisterByDateOfFillingBetweenAndTaxes_Id(Date startDate, Date endDate,String taxId, Pageable pageable);
+
+	Page<ApplicationRegister> findApplicationRegistersByDateOfFillingBetween(Date startDate, Date endDate, Pageable pageable);
 
 
 }

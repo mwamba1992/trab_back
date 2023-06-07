@@ -10,10 +10,7 @@ import org.apache.log4j.*;
 import org.springframework.beans.factory.annotation.*;
 import tz.go.mof.trab.config.userextractor.LoggedUser;
 import tz.go.mof.trab.models.Currency;
-import tz.go.mof.trab.service.CurrencyService;
-import tz.go.mof.trab.service.FinancialYearService;
-import tz.go.mof.trab.service.RegionService;
-import tz.go.mof.trab.service.TaxTypeService;
+import tz.go.mof.trab.service.*;
 import tz.go.mof.trab.utils.*;
 import tz.go.mof.trab.repositories.*;
 import java.io.File;
@@ -119,6 +116,13 @@ public class ApplicationController {
     private ApplicationStatusTrendRepository applicationStatusTrendRepository;
 
 
+    @Autowired
+    private GfsService gfsService;
+
+    @Autowired
+    private GepgMiddleWare gepgMiddleWare;
+
+
     @PostMapping(path = {"/internalCreate"})
     @ResponseBody
     public Response<ApplicationRegister> createUSer(@RequestBody final Map<String, String> req) throws JAXBException {
@@ -184,6 +188,7 @@ public class ApplicationController {
 
 
                 Adress adress = new Adress();
+                adress.setAdressId(adressRepository.findLastUsedId() + 1);
                 adress.setSlp(req.get("slp"));
                 Region region = regionService.getRegionByCode(req.get("region")).getData();
                 adress.setRegion(region);
@@ -222,9 +227,9 @@ public class ApplicationController {
                     return res;
                 }
 
-                Optional<Fees> fees = feesRepository.findById("APPLICATION");
+                Optional<Fees> applicationFee = feesRepository.findById("APPLICATION");
 
-                if(fees.isPresent() ==false) {
+                if(applicationFee.isPresent() ==false) {
                     res.setStatus(false);
                     res.setCode(ResponseCode.FAILURE);
                     res.setDescription("No Fees Set For This Operation");
@@ -240,8 +245,16 @@ public class ApplicationController {
                 ApplicationRegister register = new ApplicationRegister();
                 Adress adress = new Adress();
                 adress.setSlp(req.get("slp"));
+
+                System.out.println("last id: " + adressRepository.findLastUsedId());
+                adress.setAdressId(adressRepository.findLastUsedId() + 1);
                 Region region = regionService.getRegionByCode(req.get("region")).getData();
                 adress.setRegion(region);
+
+                System.out.println("address object: ");
+                TrabHelper.print(adress);
+
+                register.setAdressId(adressRepository.save(adress));
 
                 register.setAction("1");
                 register.setCreatedBy(loggedUser.getInfo().getName());
@@ -275,108 +288,79 @@ public class ApplicationController {
                 bill.setSpSystemId(this.systemId);
                 bill.setGeneratedDate((Date) new java.sql.Date(new Date().getTime()));
                 bill.setAppType("APPLICATION");
-                bill.setBilledAmount(fees.get().getAmount());
-                bill.setBillEquivalentAmount(fees.get().getAmount());
+                bill.setBilledAmount(new BigDecimal("0"));
+                bill.setBillEquivalentAmount(new BigDecimal("0"));
                 bill.setMiscellaneousAmount(new BigDecimal(0.0));
                 bill.setRemarks("UNPAID");
                 bill.setFinancialYear(financialYearService.getActiveFinalYear().getData().getFinancialYear());
-                register.setAdressId(adressRepository.save(adress));
+
+
+
                 Bill newBill = billRepository.save(bill);
                 register.setApplicationNo("APP" + newBill.getBillId());
-                BillWrapper billWrapper = new BillWrapper();
-                BillAckWrapper billAck = new BillAckWrapper();
+
+
                 BillItems billItems = new BillItems();
-                BillMapperHeaderDto billMapperHeaderDto = new BillMapperHeaderDto();
-                BillMapperDto billMapperDto = new BillMapperDto();
-                BillMapperDetailsDto billMapperDetailsDto = new BillMapperDetailsDto();
-                BillItemMapperDto billItemMapperDto = new BillItemMapperDto();
-                BillItemsMapperDto billItemsMapperDto = new BillItemsMapperDto();
-                List<BillMapperDetailsDto> listOfBillDetailsDto = new ArrayList<BillMapperDetailsDto>();
-                List<BillItemMapperDto> listOfBillItemsDto = new ArrayList<BillItemMapperDto>();
-                billMapperHeaderDto.setRtrRespFlg(true);
-                billMapperHeaderDto.setSpCode(this.spcode);
-                billMapperDto.setBillHeaders(billMapperHeaderDto);
-                billMapperDetailsDto.setSpBillId(newBill.getBillId());
-                billMapperDetailsDto.setSubSpCode(this.subspcode);
-                billMapperDetailsDto.setSpSysId(this.systemId);
-                billMapperDetailsDto.setBilledAmount(bill.getBilledAmount());
-                billMapperDetailsDto.setMiscellaneousAmount(bill.getMiscellaneousAmount());
-                billMapperDetailsDto.setExpiryDate(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(bill.getExpiryDate()));
-                billMapperDetailsDto.setSpPyrId(StringEscapeUtils.escapeXml(bill.getPayerName()));
-                billMapperDetailsDto.setSpPyrName(StringEscapeUtils.escapeXml(bill.getPayerName()));
-                billMapperDetailsDto.setBillDescription(bill.getBillDescription());
-                billMapperDetailsDto.setGeneratedDate(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(bill.getGeneratedDate().getTime()));
-                billMapperDetailsDto.setUser(loggedUser.getInfo().getId());
-                billMapperDetailsDto.setApprovedBy(bill.getApprovedBy());
-                billMapperDetailsDto.setPayerPhone(bill.getPayerPhone());
-                billMapperDetailsDto.setPayerEmail(bill.getPayerEmail());
-                billMapperDetailsDto.setCurrency(currency.getCurrencyShortName());
-                billMapperDetailsDto.setBillEquivalentAmount(bill.getBillEquivalentAmount());
-                billMapperDetailsDto.setReminderFlag(false);
-                billMapperDetailsDto.setBillPayType(Long.parseLong(bill.getBillPayType()));
                 billItems.setBillItemDescription(bill.getBillDescription());
                 billItems.setBillItemMiscAmount(new BigDecimal(0.0));
                 billItems.setBillItemRef("APPLICATION" + time);
-                billItems.setBillItemAmount(bill.getBilledAmount());
-                billItems.setBillItemEqvAmount(bill.getBillEquivalentAmount());
+                billItems.setBillItemAmount(applicationFee.get().getAmount());
+                billItems.setBillItemEqvAmount(applicationFee.get().getAmount());
+                billItems.setGsfCode(applicationFee.get().getGfs().getGfsCode());
+                billItems.setSourceName(gfsService.findByGfsCode(applicationFee.get().getGfs().getGfsCode()).getGfsName());
                 billItems.setBill(bill);
-                final BillItems billItemToSerialize = billItemRepository.save(billItems);
-                billItemMapperDto.setBillItemReference(bill.getBillReference());
-                billItemMapperDto.setGf(fees.get().getGfs().getGfsCode());
-                billItemMapperDto.setItemBilledAmount(bill.getBilledAmount());
-                billItemMapperDto.setItemEquivalentAmount(bill.getBillEquivalentAmount());
-                billItemMapperDto.setItemMiscellaneousAmount(billItemToSerialize.getBillItemMiscAmount());
-                billItemMapperDto.setUseItemRefOnPay("N");
-                billMapperDetailsDto.setBillItems(billItemsMapperDto);
-                listOfBillItemsDto.add(billItemMapperDto);
-                billItemsMapperDto.setBillItem((List) listOfBillItemsDto);
-                listOfBillDetailsDto.add(billMapperDetailsDto);
-                billMapperDto.setBillDetails((List) listOfBillDetailsDto);
+                billItemRepository.save(billItems);
 
 
-                String billXmlString = this.globalMethods.convertXmlToString(JAXBContext.newInstance(BillMapperDto.class), (Object) billMapperDto);
-                String signedString = "";
-                if (this.globalMethods.isFileExist(this.gepgKeyFilePath) && !this.globalMethods.isNullOREmptyString(this.gepgPassphrase) && !this.globalMethods.isNullOREmptyString(this.gepgAlias)) {
-                    billXmlString = this.globalMethods.getStringWithinXmlTag(billXmlString, "gepgBillSubReq");
-                    signedString = this.globalSignature.CreateSignature(billXmlString, this.gepgPassphrase, this.gepgAlias, this.gepgKeyFilePath);
-                    billWrapper.setGepgSignature(signedString);
-                    billWrapper.setGepgBillSubReq(billMapperDto);
-                    final Hashtable<String, String> hashtable = new Hashtable<String, String>();
-                    hashtable.put("Gepg-Com", this.gepgComm);
-                    hashtable.put("Gepg-Code", this.gepgCode);
-                    final String contentSentToGepg = this.globalMethods.convertXmlToString(JAXBContext.newInstance(BillWrapper.class), (Object) billWrapper);
-                    System.out.println("*****" + contentSentToGepg);
-                    ApplicationController.billLogger.info((Object) ("**Request To Gepg***" + this.globalMethods.beautifyXmlString(contentSentToGepg) + "\n"));
-                    try {
-                        final String response = this.globalMethods.connectToAnotherSystem(this.gepgUrl + "api/bill/sigqrequest ", contentSentToGepg, "AXML", "AXML", (Hashtable) hashtable);
-                        ApplicationController.billLogger.info((Object) ("*****bill response***" + this.globalMethods.beautifyXmlString(response) + "\n"));
-                        billAck = (BillAckWrapper) this.globalMethods.convertStringToXml(JAXBContext.newInstance(BillAckWrapper.class), response);
 
-                        newBill.setResponseCode(billAck.getBillAckCode().getTrxStsCode());
-                        billRepository.save(newBill);
 
-                        if (billAck.getBillAckCode().getTrxStsCode().equals("7101")) {
-                            register.setBillId(newBill);
-                            register.setApplicationNo("");
+                Optional < Fees > evidenceFee = feesRepository.findById("ANNEXTURE");
 
-                            getApplicationNumber(req, res, currentYear, register, region);
-                        } else {
-                            res.setDescription("Errors code received from gepg is: " + billAck.getBillAckCode().getTrxStsCode());
-                            res.setStatus(false);
-                            res.setCode(ResponseCode.FAILURE);
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        res.setDescription("Errors sending requests to gepg");
-                        res.setStatus(false);
-                        res.setCode(ResponseCode.FAILURE);
+                if (!req.get("annextures").isEmpty()) {
+                    for (int i = 0; i < Integer.parseInt(req.get("annextures")); i++) {
+
+                        billItems = new BillItems();
+                        billItems.setBillItemDescription(bill.getBillDescription());
+                        billItems.setBillItemMiscAmount(new BigDecimal(0.00));
+                        billItems.setBillItemRef("Annextures To pleadings");
+                        billItems.setBillItemAmount(evidenceFee.get().getAmount());
+                        billItems.setBillItemEqvAmount(evidenceFee.get().getAmount());
+                        billItems.setGsfCode(evidenceFee.get().getGfs().getGfsCode());
+                        billItems.setSourceName(gfsService.findByGfsCode(evidenceFee.get().getGfs().getGfsCode()).getGfsName());
+                        billItems.setBill(bill);
+                        billItemRepository.save(billItems);
                     }
-                } else {
-                    System.out.println("##### keys not configured from path #####");
+                }
+
+
+                if (!req.get("annextures").isEmpty()) {
+                    if(Integer.valueOf(req.get("annextures")) > 0){
+                    bill.setBilledAmount(bill.getBilledAmount().add(evidenceFee.get().getAmount()
+                            .multiply(new BigDecimal(Integer.valueOf(req.get("annextures"))))));
+
+
+                    bill.setBillEquivalentAmount(bill.getBillEquivalentAmount().add(evidenceFee.get().getAmount()
+                            .multiply(new BigDecimal(Integer.valueOf(req.get("annextures"))))));
+                    }
+                }
+
+                bill.setBilledAmount(bill.getBilledAmount().add(applicationFee.get().getAmount()));
+                bill.setBillEquivalentAmount(bill.getBillEquivalentAmount().add(applicationFee.get().getAmount()));
+
+                Bill billSaved = billRepository.save(bill);
+
+
+                if(gepgMiddleWare.sendRequestToGepg(billSaved)){
+                    register.setBillId(newBill);
+                    register.setApplicationNo("");
+
+                    getApplicationNumber(req, res, currentYear, register, region);
+                }else{
+                    res.setDescription("Errors code received from gepg is: ");
                     res.setStatus(false);
-                    res.setDescription("Keys Not Configured");
                     res.setCode(ResponseCode.FAILURE);
                 }
+
             }
         } catch (Exception e2) {
             e2.printStackTrace();
@@ -394,7 +378,7 @@ public class ApplicationController {
             register.setApplicationNo(region.getCode().toUpperCase() + "." +manualApplicationSequence.getVatSequence() + "/" + currentYear);
             manualApplicationSequence.setVatSequence(manualApplicationSequence.getVatSequence()+1);
             manualApplicationSequenceRepository.save(manualApplicationSequence);
-        }else if(taxTypeService.findById(req.get("tax")).getTaxName().equals("CUSTOM AND EXERCISE")){
+        }else if(taxTypeService.findById(req.get("tax")).getTaxName().equals("CUSTOM AND EXCISE")){
             register.setApplicationNo(region.getCode().toUpperCase() + "." +manualApplicationSequence.getCustomSequence() + "/" + currentYear);
             manualApplicationSequence.setCustomSequence(manualApplicationSequence.getCustomSequence()+1);
             manualApplicationSequenceRepository.save(manualApplicationSequence);

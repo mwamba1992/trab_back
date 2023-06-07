@@ -55,6 +55,7 @@ public class NoticeServiceImpl implements NoticeService {
 
     private final  ManualSequenceRepository manualSequenceRepository;
 
+
     @Value("${tz.go.trab.systemid}")
     private String systemId;
 
@@ -183,11 +184,8 @@ public class NoticeServiceImpl implements NoticeService {
             notice.setSystemUser(user);
             notice.setDes(req.get("des"));
 
-            ManualSequence manualSequence = manualSequenceRepository.findAll().get(0);
-            notice.setNoticeNo(manualSequence.getSequence() + "/" + currentYear);
-            manualSequence.setSequence(manualSequence.getSequence()+1);
-            manualSequenceRepository.save(manualSequence);
             Adress adress = new Adress();
+            adress.setAdressId(adressRepository.findLastUsedId() + 1);
             adress.setSlp(req.get("adress"));
             adress.setRegion(regionService.getRegionByCode(req.get("region")).getData());
 
@@ -196,19 +194,31 @@ public class NoticeServiceImpl implements NoticeService {
             notice.setCreatedBy(loggedUser.getInfo().getName());
             notice.setAppelantName(req.get("companyName"));
 
-
-            if (gepgMiddleWare.sendRequestToGepg(newBill)) {
-                notice.setBillId(newBill);
-                Notice newNotice = noticeRepository.save(notice);
-                response.setStatus(true);
-                response.setCode(ResponseCode.SUCCESS);
-                response.setDescription("SUCCESS");
-                response.setData(newNotice);
-
-            } else {
+            if(noticeRepository.findBynoticeNo(notice.getNoticeNo()) !=null){
                 response.setStatus(false);
-                response.setDescription("Problem occurred Please Contact Support! ");
                 response.setCode(ResponseCode.FAILURE);
+                response.setDescription("Notice Number Already Exist");
+                return response;
+            }else {
+                if (gepgMiddleWare.sendRequestToGepg(newBill)) {
+                    notice.setBillId(newBill);
+                    Notice newNotice = noticeRepository.save(notice);
+                    response.setStatus(true);
+                    response.setCode(ResponseCode.SUCCESS);
+                    response.setDescription("SUCCESS");
+                    response.setData(newNotice);
+
+
+                    ManualSequence manualSequence = manualSequenceRepository.findAll().get(0);
+                    notice.setNoticeNo(manualSequence.getSequence() + "/" + currentYear);
+                    manualSequence.setSequence(manualSequence.getSequence()+1);
+                    manualSequenceRepository.save(manualSequence);
+
+                } else {
+                    response.setStatus(false);
+                    response.setDescription("Problem occurred Please Contact Support! ");
+                    response.setCode(ResponseCode.FAILURE);
+                }
             }
 
         } catch (Exception e) {

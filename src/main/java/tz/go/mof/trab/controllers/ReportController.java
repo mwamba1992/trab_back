@@ -34,6 +34,7 @@ import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Controller
@@ -73,6 +74,9 @@ public class ReportController {
 
     @Autowired
     private NoticeRepository noticeRepository;
+
+    @Autowired
+    private ApplicationRegisterRepository applicationRegisterRepository;
 
 
     private static final Logger reportLogger = Logger.getLogger("trab.payment.request");
@@ -189,6 +193,26 @@ public class ReportController {
 
             });
 
+
+            Map<String, List<BillItemsReportDto>> listOfBillItemsGrouped =
+                    billItemsReportDtos.stream().collect(Collectors.groupingBy(w -> w.getGovernmentFinancialStatisticsDescription()));
+
+
+            List<BillItemsReportDto> newBillItemsReportDtos = new ArrayList<>();
+            listOfBillItemsGrouped.forEach((k,v) -> {
+                        BillItemsReportDto dto = new BillItemsReportDto();
+                        dto.setGovernmentFinancialStatisticsDescription(v.size() + " x " + v.get(0).getGovernmentFinancialStatisticsDescription());
+                        dto.setItemBilledAmount(String.valueOf(v.size()*Double.valueOf(v.get(0).getItemBilledAmount())));
+                        newBillItemsReportDtos.add(dto);
+                     }
+                    );
+
+
+            System.out.println("######### list of bill items ############");
+            TrabHelper.print(listOfBillItemsGrouped);
+
+
+
             File file = new File(REPORT_DESIGN_PATH + "bill_item_sub_report.jrxml");
             final JasperReport billSubreport = JasperCompileManager.compileReport(new FileInputStream(file));
             JRDataSource reportDataSource = new JRBeanCollectionDataSource(billReport);
@@ -196,7 +220,7 @@ public class ReportController {
 
             Map<String, Object> parameters = new HashMap<String, Object>();
             parameters.put("billSubreport", billSubreport);
-            parameters.put("billItems", billItemsReportDtos);
+            parameters.put("billItems", newBillItemsReportDtos);
             parameters.put("coat", REPORT_IMG);
 
             File billReportTemplate = new File(REPORT_DESIGN_PATH + "bill.jrxml");
@@ -677,6 +701,18 @@ public class ReportController {
         Pageable paging = PageRequest.of(0, 10000, Sort.by("noticeId").descending());
         SimpleDateFormat dmyFormat = new SimpleDateFormat("yyyy-MM-dd");
        return noticeRepository.findAllByLoggedAtBetween(dmyFormat.parse(req.get("dateFrom")),  dmyFormat.parse(req.get("dateTo")), paging);
+
+
+    }
+
+    @RequestMapping(value = "/applications-dates", method = RequestMethod.POST, produces = "application/json")
+    @ResponseBody
+    public Page<ApplicationRegister>  getApplicationsBetweenDates(@RequestBody Map<String, String> req) throws ParseException {
+
+
+        Pageable paging = PageRequest.of(0, 10000, Sort.by("applicationId").descending());
+        SimpleDateFormat dmyFormat = new SimpleDateFormat("yyyy-MM-dd");
+        return applicationRegisterRepository.findApplicationRegistersByDateOfFillingBetween(dmyFormat.parse(req.get("dateFrom")),  dmyFormat.parse(req.get("dateTo")), paging);
 
 
     }

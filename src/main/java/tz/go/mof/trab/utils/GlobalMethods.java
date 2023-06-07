@@ -543,7 +543,7 @@ public class GlobalMethods {
         billReportDto.setQrString(generateQRCodeImage(qr, 200, 200, bill));
         billReportDto.setPayerPhone(bill.getPayerPhone());
         billReportDto.setExpireDate(bill.getExpiryDate().toString());
-        billReportDto.setPayerName(bill.getPayerName());
+        billReportDto.setPayerName(bill.getPayerName().replace("\n", ""));
         billReportDto.setServiceProviderCode(spCode);
         billReportDto.setPreparedBy(loggedUser.getInfo().getName());
         billReportDto.setPrintedBy(loggedUser.getInfo().getName());
@@ -551,17 +551,23 @@ public class GlobalMethods {
         billReportDto.setBillDescription(bill.getBillDescription());
         billReportDto.setAmountInWords(numberToWordsUtils.convert((long)bill.getBilledAmount().doubleValue()));
 
+
+        TrabHelper.print(billReportDto);
+
         if(bill.getAppType() !=null){
             if(bill.getAppType().equals("STATEMENT")) {
-                billReportDto.setPaymentRef(appealsRepository.findAppealsByBill(bill.getBillId()).getAppealNo());
+                billReportDto.setPaymentRef(appealsRepository.findAppealsByBill(bill.getBillId()) !=null?
+                        appealsRepository.findAppealsByBill(bill.getBillId()).getAppealNo():bill.getBillReference());
             }
 
             if(bill.getAppType().equals("NOTICE")){
-                billReportDto.setPaymentRef(noticeRepository.findNoticeByBill(bill.getBillId()).getNoticeNo());
+                billReportDto.setPaymentRef(noticeRepository.findNoticeByBill(bill.getBillId()) !=null?
+                        noticeRepository.findNoticeByBill(bill.getBillId()).getNoticeNo():bill.getBillReference());
             }
 
             if(bill.getAppType().equals("APPLICATION")){
-                billReportDto.setPaymentRef(applicationRegisterRepository.findApplicationRegisterByBill(bill.getBillId()).getApplicationNo());
+                billReportDto.setPaymentRef(applicationRegisterRepository.findApplicationRegisterByBill(bill.getBillId()) !=null?
+                        applicationRegisterRepository.findApplicationRegisterByBill(bill.getBillId()).getApplicationNo():bill.getBillReference());
             }
         }else {
             billReportDto.setPaymentRef(bill.getBillReference());

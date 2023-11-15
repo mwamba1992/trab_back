@@ -9,10 +9,8 @@ import org.springframework.stereotype.Service;
 import tz.go.mof.trab.config.userextractor.LoggedUser;
 import tz.go.mof.trab.models.*;
 import tz.go.mof.trab.repositories.*;
-import tz.go.mof.trab.utils.GepgMiddleWare;
-import tz.go.mof.trab.utils.Response;
-import tz.go.mof.trab.utils.ResponseCode;
-import tz.go.mof.trab.utils.TrabHelper;
+import tz.go.mof.trab.utils.*;
+
 import javax.transaction.Transactional;
 import java.math.BigDecimal;
 import java.text.DateFormat;
@@ -55,6 +53,8 @@ public class NoticeServiceImpl implements NoticeService {
 
     private final  ManualSequenceRepository manualSequenceRepository;
 
+    private final GlobalMethods globalMethods;
+
 
     @Value("${tz.go.trab.systemid}")
     private String systemId;
@@ -66,7 +66,10 @@ public class NoticeServiceImpl implements NoticeService {
                       UserRepository userRepository, AdressRepository adressRepository, RegionService regionService,
                       AppealantRepository appealantRepository, CurrencyRepository currencyRepository,
                       FinancialYearService financialYearService, BillRepository billRepository,
-                      BillItemRepository billItemRepository, GepgMiddleWare gepgMiddleWare, ManualSequenceRepository manualSequenceRepository) {
+                      BillItemRepository billItemRepository,
+                      GepgMiddleWare gepgMiddleWare,
+                      ManualSequenceRepository manualSequenceRepository,
+                      GlobalMethods globalMethods) {
         this.noticeRepository = noticeRepository;
         this.loggedUser = loggedUser;
         this.feesRepository = feesRepository;
@@ -80,6 +83,7 @@ public class NoticeServiceImpl implements NoticeService {
         this.billItemRepository = billItemRepository;
         this.gepgMiddleWare = gepgMiddleWare;
         this.manualSequenceRepository = manualSequenceRepository;
+        this.globalMethods = globalMethods;
 
     }
 
@@ -127,6 +131,23 @@ public class NoticeServiceImpl implements NoticeService {
             Date noticeDate = formatter.parse(dates[0]);
             Date taxDate = formatter.parse(taxationDate[0]);
             Date serviceTax = formatter.parse(serviceTaxationDate[0]);
+
+            long diff = globalMethods.getDifferenceInDays(serviceTax, new Date());
+
+
+            if(req.get("isChecked").equals("false")) {
+                if (diff > 30) {
+                    response.setStatus(false);
+                    response.setCode(ResponseCode.FAILURE);
+                    response.setDescription("Time To Fill Notice has Exceeded 30 days From: " + serviceTaxationDate[0]);
+
+                    return response;
+                }
+            } else {
+                notice.setReasonToExemptedDateOfServiceDecision(req.get("reason"));
+            }
+
+
 
 
             //setting up appealeant details

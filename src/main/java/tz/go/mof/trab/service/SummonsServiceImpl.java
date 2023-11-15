@@ -5,12 +5,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import tz.go.mof.trab.dto.bill.BillSearchDto;
 import tz.go.mof.trab.models.Summons;
 import tz.go.mof.trab.repositories.SummonsRepository;
 import javax.transaction.Transactional;
+import java.util.Date;
 import java.util.List;
 
 
@@ -32,9 +34,10 @@ public class SummonsServiceImpl implements  SummonsService{
 
     @Override
     public Page<Summons> findByPage() {
-        Page<Summons> page = summonsRepository.findAll(
-                PageRequest.of(0, 7, Sort.by(Sort.Direction.DESC, "summonId")));
-
+//        Page<Summons> page = summonsRepository.findAll(
+//                PageRequest.of(0, 7, Sort.by(Sort.Direction.ASC, "summonId")));
+        Pageable pageable = PageRequest.of(0, 7, Sort.by(Sort.Direction.ASC, "summonId"));
+        Page<Summons> page = summonsRepository.findSummonsBySummonStartDateGreaterThanEqual(new Date(), pageable);
         return page;
     }
 }

@@ -15,6 +15,11 @@ import java.security.PublicKey;
 import java.security.cert.Certificate;
 import org.springframework.stereotype.Component;
 
+
+/**
+ *
+ * @author  Joel Msungu Gaitan
+ */
 @Component
 public class GePGGlobalSignature {
 

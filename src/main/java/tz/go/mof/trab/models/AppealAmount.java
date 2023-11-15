@@ -33,6 +33,8 @@ public class AppealAmount extends BaseEntity{
     @JoinColumn(name = "currencyId", nullable = false)
     private Currency currency;
 
+    private String amountDescription;
+
 
 
 }

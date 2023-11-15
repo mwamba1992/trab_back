@@ -24,10 +24,7 @@ import tz.go.mof.trab.dto.report.*;
 import tz.go.mof.trab.models.*;
 import tz.go.mof.trab.repositories.*;
 import tz.go.mof.trab.service.ReportsGeneratorService;
-import tz.go.mof.trab.utils.GlobalMethods;
-import tz.go.mof.trab.utils.Response;
-import tz.go.mof.trab.utils.ResponseCode;
-import tz.go.mof.trab.utils.TrabHelper;
+import tz.go.mof.trab.utils.*;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -333,12 +330,12 @@ public class ReportController {
             } else {
 
 
-                List<ApplicationDto> applicationDtos = new ArrayList<ApplicationDto>();
+                List<ApplicationDto> applicationDtos = new ArrayList<>();
                 applicationRegisters.forEach(app -> {
                     ApplicationDto applicationDto = new ApplicationDto();
                     applicationDto.setApplicationNo(app.getApplicationNo());
-                    applicationDto.setAppeleantName(app.getApplicant().getFirstName());
-                    applicationDto.setRespondent(app.getRespondent().getName());
+                    applicationDto.setAppeleantName(app.getApplicant().getFirstName() !=null?app.getApplicant().getFirstName():"");
+                    applicationDto.setRespondent(app.getRespondent() !=null?app.getRespondent().getName():"");
                     applicationDto.setDateOfDecision(app.getDateOfDecision());
                     applicationDto.setDateOfFilling(app.getDateOfFilling());
                     applicationDto.setTax(app.getTaxes().getTaxName());
@@ -438,9 +435,10 @@ public class ReportController {
                     NoticeDto noticeDto = new NoticeDto();
                     noticeDto.setNoticeNo(notice.getNoticeNo());
                     noticeDto.setAppealantName(notice.getAppelantName());
-                    noticeDto.setAppealantTin(notice.getAppelantName());
+                    noticeDto.setNoticeNo(notice.getNoticeNo());
                     noticeDto.setLoggedAt(notice.getLoggedAt());
-                    noticeDto.setAdress(notice.getAdressId().getSlp() + notice.getAdressId().getRegion().getName());
+                    noticeDto.setAdress(notice.getAdressId().getSlp() != null?notice.getAdressId().getSlp():""  +
+                            notice.getAdressId().getRegion() !=null?notice.getAdressId().getRegion().getName():"");
                     noticeDto.setCreatedBy(notice.getSystemUser().getCreatedBy());
                     noticeDtos.add(noticeDto);
 
@@ -536,33 +534,52 @@ public class ReportController {
                     appealDto.setRespondent("COMM GENERAL");
                     appealDto.setAppealNo(app.getAppealNo());
                     appealDto.setDateOfFilling(app.getDateOfFilling());
-                    appealDto.setDecidedBy(app.getSummons() != null ? app.getSummons().getJudge() : "NONE");
+
+
+                    if (app != null) {
+                        if ((app.getSummons() != null)){
+                            appealDto.setDecidedBy(app.getSummons().getJudge().toUpperCase());
+                        } else if (app.getCreatedBy() != null && app.getCreatedBy().equalsIgnoreCase("System Created")) {
+                            appealDto.setDecidedBy(app.getDecidedBy().toUpperCase());
+                        }  else {
+                            appealDto.setDecidedBy("NONE");
+                        }
+                    } else {
+                        appealDto.setDecidedBy("NONE");
+                    }
+
                     appealDto.setNatureOfAppeal(app.getNatureOfAppeal());
                     appealDto.setDecidedDate(app.getDecidedDate());
                     appealDto.setTax(app.getTax().getTaxName());
-                    appealDto.setRemarks(app.getRemarks().toUpperCase());
+                    appealDto.setRemarks((app.getSummaryOfDecree() !=null)?app.getSummaryOfDecree().toUpperCase():"NO REMARKS");
                     appealDto.setAmountDetails("");
-                    AppealAmount usdAmt = app.getAppealAmount().stream().filter(x -> x.getCurrency().getCurrencyShortName().
-                            equals("USD")).findAny().isPresent() ? app.getAppealAmount().stream().filter(x -> x.getCurrencyName().
-                            equals("USD")).findAny().get() : null;
-                    AppealAmount tzsmt = app.getAppealAmount().stream().filter(x -> x.getCurrency().getCurrencyShortName().
-                            equals("TZS")).findAny().isPresent() ? app.getAppealAmount().stream().filter(x -> x.getCurrencyName().
-                            equals("TZS")).findAny().get() : null;
 
-                    appealDto.setUsd(usdAmt != null ? usdAmt.getAmountOnDispute() : new BigDecimal("0.00"));
-                    appealDto.setTzs(tzsmt != null ? tzsmt.getAmountOnDispute() : new BigDecimal("0.00"));
+
+
+                    BigDecimal tzsAmount = new BigDecimal("0.00");
+                    BigDecimal usdAmount = new BigDecimal("0.00");
+
+                    List<AppealAmount> amountList = new ArrayList<>(app.getAppealAmount());
+
+                    for (AppealAmount amount : amountList) {
+                        if (amount.getCurrency().getCurrencyShortName().equals("TZS")) {
+                            tzsAmount = tzsAmount.add(amount.getAmountOnDispute());
+                        } else if (amount.getCurrency().getCurrencyShortName().equals("USD")) {
+                            usdAmount = usdAmount.add(amount.getAmountOnDispute());
+                        }
+                    }
+
+                    appealDto.setUsd(usdAmount);
+                    appealDto.setTzs(tzsAmount);
+
+
                     appealDto.setFindings(app.getStatusTrend().getAppealStatusTrendName());
 
-                    sumAmountInTzs.add(usdAmt != null ? usdAmt.getAmountOnDispute() : new BigDecimal("0.00"));
-                    sumAmountInUsd.add(tzsmt != null ? tzsmt.getAmountOnDispute() : new BigDecimal("0.00"));
+                    sumAmountInTzs.add(tzsAmount);
+                    sumAmountInUsd.add(usdAmount);
 
                     appealDtos.add(appealDto);
                 });
-
-
-                System.out.println("tzs: " + sumAmountInTzs);
-                System.out.println("usd: " + sumAmountInUsd);
-
 
                 if (!request.get("dateFrom").isEmpty()) {
                     dateFrom = "Date From: " + request.get("dateFrom");

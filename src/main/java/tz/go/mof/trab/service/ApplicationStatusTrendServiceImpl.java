@@ -100,12 +100,13 @@ public class ApplicationStatusTrendServiceImpl implements ApplicationStatusTrend
 
         try {
             if (applicationStatusTrendRepository.findById(trendId).get() != null) {
-                ApplicationStatusTrend appealStatusTrend = applicationStatusTrendRepository.findById(trendId).get();
-                TrabHelper.copyNonNullProperties(appealStatusTrend, appealStatusTrend);
+                ApplicationStatusTrend  appealStatusTrendFromDB = applicationStatusTrendRepository.findById(trendId).get();
+                appealStatusTrendFromDB.setApplicationStatusTrendName(applicationStatusTrend.getApplicationStatusTrendName());
+                appealStatusTrendFromDB.setApplicationStatusTrendDesc(applicationStatusTrend.getApplicationStatusTrendDesc());
 
-                appealStatusTrend.setUpdatedAt(LocalDateTime.now());
-                appealStatusTrend.setUpdatedBy(loggedUser.getInfo().getId());
-                response.setData(applicationStatusTrendRepository.save(appealStatusTrend));
+                appealStatusTrendFromDB.setUpdatedAt(LocalDateTime.now());
+                appealStatusTrendFromDB.setUpdatedBy(loggedUser.getInfo().getId());
+                response.setData(applicationStatusTrendRepository.save(appealStatusTrendFromDB));
                 response.setCode(ResponseCode.SUCCESS);
                 response.setDescription("SUCCESS");
                 response.setStatus(true);

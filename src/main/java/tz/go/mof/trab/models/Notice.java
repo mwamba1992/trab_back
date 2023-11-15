@@ -79,5 +79,11 @@ public class Notice {
 	@Column(name = "updated_by",nullable = true)
 	private String updatedBy;
 
+	private boolean isExemptedToFilled = false;
+
+	private String reasonToBeExempted;
+
+	private String reasonToExemptedDateOfServiceDecision;
+
 
 }

@@ -81,13 +81,19 @@ public interface AppealsRepository extends PagingAndSortingRepository<Appeals, L
 	Appeals findAppealsByBill(String billId);
 
 
-	Page<Appeals> findAppealsByDateOfFillingBetween(Date startDate, Date endDate, Pageable pageable);
+	Page<Appeals> findAppealsByDateOfFillingBetweenOrderByDateOfFillingAsc(Date startDate, Date endDate, Pageable pageable);
 
-	Page<Appeals> findAppealsByDateOfFillingBetweenAndTax_Id(Date startDate, Date endDate,String taxId, Pageable pageable);
+	Page<Appeals> findAppealsByDateOfFillingBetweenAndTax_IdOrderByDateOfFillingAsc(Date startDate, Date endDate,String taxId, Pageable pageable);
 
 	@Query(value = "select count(*) from Appeals ap where  ap.decidedDate is null")
 	int findPendingForJudgement();
 
+
+	@Query(value = "select ap from Appeals ap where  ap.decidedDate is null and ap.summons is null")
+	List<Appeals> findPendingForJudgementWithNoSummons();
+
+	@Query(value = "select ap from Appeals ap where  ap.decidedDate is null and ap.summons is not null")
+	List<Appeals> findPendingForJudgementWithSummons();
 
 	@Query(value = "select a from Appeals a where a.decidedDate is null")
 	List<Appeals> findAllPendingAppeals();
@@ -97,5 +103,12 @@ public interface AppealsRepository extends PagingAndSortingRepository<Appeals, L
 	Page<Appeals> findAllSystemCreatedAppeals(Pageable pageable);
 
 	List<Appeals> findAppealsByAppealNoAndTax_Id(String appealNo, String taxId);
+
+	Appeals findAppealsByAppealNoAndTax_TaxName(String appealNo, String taxName);
+	List<Appeals> findAppealsByDecidedDateNullOrderByDateOfFillingAsc();
+
+	@Query("SELECT a FROM Appeals a WHERE a.procedingStatus = 'CONCLUDED'")
+	List <Appeals> findAppealsByProcedingStatus();
+
 	}
 

@@ -12,5 +12,7 @@ public interface TaxTypeRepository extends CrudRepository<TaxType, String> {
 
     public List<TaxType> findByActiveTrue();
 
+    TaxType findTaxTypeByTaxName(String taxName);
+
 
 }

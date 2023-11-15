@@ -161,4 +161,7 @@ public class Appeals {
 
 	private String natOfBus;
 
+	private boolean isLoaded;
+
+
 }

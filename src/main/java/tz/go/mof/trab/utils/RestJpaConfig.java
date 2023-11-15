@@ -22,5 +22,6 @@ public class RestJpaConfig extends RepositoryRestConfigurerAdapter {
         config.exposeIdsFor(Taxes.class);
         config.exposeIdsFor(Appeals.class);
         config.exposeIdsFor(ApplicationRegister.class);
+        config.exposeIdsFor(AppealStatusTrend.class);
     }
 }

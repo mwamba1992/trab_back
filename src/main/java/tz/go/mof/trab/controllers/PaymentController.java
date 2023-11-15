@@ -92,6 +92,10 @@ public class PaymentController {
 		String signedString = "";
 		String responseString = "";
 		paymentLogger.info("######## SP PaymentInfo Receive ######## " + globalMethod.beautifyXmlString(requestBody));
+
+		requestBody = removeXmlDeclaration(requestBody);
+
+		paymentLogger.info("######## SP PaymentInfo Receive  after removing ######## " + globalMethod.beautifyXmlString(requestBody));
 		
 		try {
 
@@ -164,7 +168,7 @@ public class PaymentController {
 				paymentLogger.info("########### Failed to Verify Payment Details ############");
 			}
 		}
-	       return new ResponseEntity<Object>(responseString, HttpStatus.ACCEPTED);
+	       return new ResponseEntity<>(responseString, HttpStatus.ACCEPTED);
 		}catch(Exception e){
 		  e.printStackTrace();
 		  
@@ -194,6 +198,11 @@ public class PaymentController {
 		billPageListResponse.setTotalElements(Long.valueOf(paymentList.size()));
 		return billPageListResponse;
 
+	}
+
+
+	public String removeXmlDeclaration(String xmlString) {
+		return xmlString.replaceFirst("<\\?xml[^>]+\\?>", "");
 	}
 
 }

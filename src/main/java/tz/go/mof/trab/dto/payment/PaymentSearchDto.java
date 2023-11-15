@@ -19,5 +19,6 @@ public class PaymentSearchDto {
     private String gepgReference;
     private  String councilCode;
     private  String regionCode;
+    private String type;
 
 }

@@ -7,8 +7,10 @@ import java.math.BigInteger;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.internal.function.numeric.Sum;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,7 +51,7 @@ public class AppealController {
 
     private final NoticeRepository noticeRepository;
     private final AppealsRepository appealsRepository;
-    private final AppealStatusTrendRepository  appealStatusTrendRepository;
+    private final AppealStatusTrendRepository appealStatusTrendRepository;
     private final BillItemRepository billItemRepository;
     private final LoggedUser loggedUser;
     private final CurrencyService currencyService;
@@ -62,6 +64,21 @@ public class AppealController {
 
 
     private TaxTypeRepository taxTypeRepository;
+
+
+    @Autowired
+    private JudgeService judgeService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private SummonsRepository summonsRepository;
+
+    @Autowired
+    private SummonsAppealsRepository summonsAppealsRepository;
+
+
 
     @Autowired
     void setRegionRepository(RegionRepository regionRepository) {
@@ -77,18 +94,18 @@ public class AppealController {
                      CurrencyService currencyService, LoggedUser loggedUser, BillItemRepository billItemRepository,
                      AppealStatusTrendRepository appealStatusTrendRepository, AppealsRepository appealsRepository,
                      NoticeRepository noticeRepository, GlobalMethods globalMethods, PaymentRepository paymentRepository,
-                     AppealServedByRepository appealServedByRepository){
-         this.appealService = appealService;
-         this.appealAmountRepository = appealsAmountRepository;
-         this.currencyService = currencyService;
-         this.loggedUser = loggedUser;
-         this.billItemRepository = billItemRepository;
-         this.appealStatusTrendRepository = appealStatusTrendRepository;
-         this.appealsRepository = appealsRepository;
-         this.noticeRepository = noticeRepository;
-         this.globalMethods = globalMethods;
-         this.paymentRepository = paymentRepository;
-         this.appealServedByRepository = appealServedByRepository;
+                     AppealServedByRepository appealServedByRepository) {
+        this.appealService = appealService;
+        this.appealAmountRepository = appealsAmountRepository;
+        this.currencyService = currencyService;
+        this.loggedUser = loggedUser;
+        this.billItemRepository = billItemRepository;
+        this.appealStatusTrendRepository = appealStatusTrendRepository;
+        this.appealsRepository = appealsRepository;
+        this.noticeRepository = noticeRepository;
+        this.globalMethods = globalMethods;
+        this.paymentRepository = paymentRepository;
+        this.appealServedByRepository = appealServedByRepository;
     }
 
     @PostMapping(path = "/internalCreate")
@@ -119,6 +136,11 @@ public class AppealController {
 
             globalMethods.saveAppellant(req, notice);
 
+            String dates[] = req.get("date").split("T");
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+            Date  dateOfFilling  = formatter.parse(dates[0]);
+
+
             app.setAssNo(req.get("assNo"));
             app.setBankNo(req.get("bankNo"));
             app.setNatOfBus(req.get("natOf"));
@@ -127,6 +149,11 @@ public class AppealController {
             app.setNatureOfAppeal(req.get("natureOfAppeal"));
             app.setUpdatedAt(LocalDateTime.now());
             app.setUpdatedBy(loggedUser.getInfo().getName());
+            app.setDateOfFilling(dateOfFilling);
+
+            app.setAppealNo(req.get("appealNo"));
+            app.setAppellantName(req.get("appealantName"));
+            app.setStatusTrend(appealStatusTrendRepository.findById(req.get("status")).get());
 
 
             appealAmountRepository.deleteAppealAmounts(app.getAppealId());
@@ -166,7 +193,6 @@ public class AppealController {
     }
 
 
-
     @PostMapping("/internalEdit")
     @ResponseBody
     public Response<Appeals> editAppealStatement(@RequestBody Map<String, String> req) {
@@ -176,18 +202,20 @@ public class AppealController {
 
             TrabHelper.print(req);
 
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+
             Appeals app = appealsRepository.findByAppealNoAndTaxType(req.get("appealId"), req.get("taxId"));
-            app.setDecidedDate(new SimpleDateFormat("yyyy-MM-DD").parse(req.get("desicionDate").split("T")[0]));
+            app.setDecidedDate(formatter.parse(req.get("desicionDate").split("T")[0]));
             app.setSummaryOfDecree(req.get("remarks"));
             app.setStatusTrend(appealStatusTrendRepository.findAppealStatusTrendByAppealStatusTrendName(req.get("status")));
-            app.setDecidedDate(new Date());
             app.setProcedingStatus(req.get("status"));
             app.setWonBy(req.get("wonBy"));
             app.setCopyOfJudgement(req.get("fileName"));
 
-            if(req.get("judge").isEmpty() || req.get("judge") == null){
-            app.setDecidedBy(app.getSummons().getJud().getName());
-            }else{
+
+            if (req.get("judge").isEmpty() || req.get("judge") == null) {
+                app.setDecidedBy(app.getSummons().getJud().getName());
+            } else {
                 app.setDecidedBy(req.get("judge"));
             }
 
@@ -199,20 +227,22 @@ public class AppealController {
                 binaryData = req.get("file");
                 filePath = req.get("fileName");
 
-            }
 
-            if (!new File(uploadingDir).exists()) {
-                boolean success = new File(uploadingDir).mkdirs();
-                if (!success) {
+                if (!new File(uploadingDir).exists()) {
+                    boolean success = new File(uploadingDir).mkdirs();
+                    if (!success) {
+                    }
                 }
-            }
 
-            File fileToCreate = new File(uploadingDir, filePath);
+                File fileToCreate = new File(uploadingDir, filePath);
 
 
-            if (!fileToCreate.exists()) {
-                byte[] decodedBytes = Base64.getDecoder().decode(binaryData);
-                FileUtils.writeByteArrayToFile(fileToCreate, decodedBytes);
+                if (!fileToCreate.exists()) {
+                    byte[] decodedBytes = Base64.getDecoder().decode(binaryData);
+                    FileUtils.writeByteArrayToFile(fileToCreate, decodedBytes);
+                }
+
+
             }
 
 
@@ -373,7 +403,9 @@ public class AppealController {
         Response res = new Response();
         try {
 
-            Appeals app = appealsRepository.findByappealNo(req.get("appealId"));
+            System.out.println(req);
+
+            Appeals app = appealsRepository.findById(Long.valueOf(req.get("appealId"))).get();
 
 
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
@@ -394,19 +426,19 @@ public class AppealController {
                 Summons summon = app.getSummons();
                 String start;
                 String end;
-                if(!req.get("start").isEmpty()) {
+                if (!req.get("start").isEmpty()) {
                     start = req.get("start").split("T")[0];
                     Date newStart = formatter.parse(start);
                     summon.setSummonStartDate(newStart);
                 }
 
-                if(!req.get("end").isEmpty()) {
+                if (!req.get("end").isEmpty()) {
                     end = req.get("end").split("T")[0];
                     Date newEnd = formatter.parse(end);
                     summon.setSummonEndDate(newEnd);
                 }
 
-                if(!req.get("time").isEmpty()){
+                if (!req.get("time").isEmpty()) {
                     summon.setTime(req.get("time") + " HRS");
                 }
                 app.setSummons(summon);
@@ -554,29 +586,29 @@ public class AppealController {
 
         TrabHelper.print(req);
 
-            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-            Pageable pageable = PageRequest.of(0, 10000, Sort.by("appealId").descending());
-            Date start = null;
-            Date end = null;
-            try {
-                start = formatter.parse(req.get("dateFrom").split("T")[0]);
-                end = formatter.parse(req.get("dateTo").split("T")[0]);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+        Pageable pageable = PageRequest.of(0, 10000, Sort.by("appealId").descending());
+        Date start = null;
+        Date end = null;
+        try {
+            start = formatter.parse(req.get("dateFrom").split("T")[0]);
+            end = formatter.parse(req.get("dateTo").split("T")[0]);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-            if(req.get("tax") == null || req.get("tax").isEmpty())
-                return appealsRepository.findAppealsByDateOfFillingBetween(start, end, pageable);
-            else{
-                return appealsRepository.findAppealsByDateOfFillingBetweenAndTax_Id(start, end, req.get("tax"), pageable);
-            }
+        if (req.get("tax") == null || req.get("tax").isEmpty())
+            return appealsRepository.findAppealsByDateOfFillingBetweenOrderByDateOfFillingAsc(start, end, pageable);
+        else {
+            return appealsRepository.findAppealsByDateOfFillingBetweenAndTax_IdOrderByDateOfFillingAsc(start, end, req.get("tax"), pageable);
+        }
 
     }
 
 
     @PostMapping(path = "load-backlog", produces = "application/json")
     @ResponseBody
-    public Response uploadLogBack(@RequestBody Map<String, String> requestBody){
+    public Response uploadLogBack(@RequestBody Map<String, String> requestBody) {
         TrabHelper.print(requestBody);
         return appealService.uploadAppealManually(requestBody);
     }
@@ -592,13 +624,13 @@ public class AppealController {
         Region region = regionRepository.findById(requestBody.get("region")).get();
         String appealNo = region.getCode() + "." + requestBody.get("appealNo");
 
-        System.out.println("Appeal No"+ appealNo);
+        System.out.println("Appeal No" + appealNo);
         TaxType taxType = taxTypeRepository.findById(requestBody.get("tax")).get();
-        System.out.println("Taxes"+ taxType.getTaxName());
+        System.out.println("Taxes" + taxType.getTaxName());
 
         Response response = new Response();
 
-        if (appealsRepository.findAppealsByAppealNoAndTax_Id(appealNo, requestBody.get("tax")).size()>0) {
+        if (appealsRepository.findAppealsByAppealNoAndTax_Id(appealNo, requestBody.get("tax")).size() > 0) {
             response = new Response();
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("Appeal already exist");
@@ -610,5 +642,116 @@ public class AppealController {
         response.setStatus(true);
         return response;
     }
+
+    @PostMapping(path = "load-backlog-pending", produces = "application/json")
+    @ResponseBody
+    public Response uploadLogBackPending(@RequestBody Map<String, String> req) {
+
+        Response res = new Response();
+
+        try {
+            Summons summons = new Summons();
+            Date startDate;
+            Date endDate;
+            Date lastOrderDate;
+
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+
+            String startDates[] = req.get("startDate").split("T");
+            String endDates[] = req.get("endDate").split("T");
+            String lastOrderDates[] = req.get("lastOrderDate").split("T");
+
+
+            startDate = formatter.parse(startDates[0]);
+            endDate = formatter.parse(endDates[0]);
+            lastOrderDate = formatter.parse(lastOrderDates[0]);
+
+
+
+
+            if (endDate.before(startDate)) {
+                res.setDescription("Dates mismatch!!!");
+                res.setStatus(false);
+                res.setData(null);
+                res.setCode(ResponseCode.FAILURE);
+                return res;
+            }
+
+            List<Map<String, Integer>> mapList;
+            ObjectMapper mapper = new ObjectMapper();
+            AtomicReference<String> appList = new AtomicReference<>("");
+
+            SummonsAppeal summonsAppeals = new SummonsAppeal();
+
+            Judge judge = judgeService.findById(req.get("judge"));
+
+            summons.setJudge(judge.getName());
+            summons.setJud(judge);
+
+
+            mapList = mapper.readValue(req.get("appList"), List.class);
+
+            if (mapList.size() < 1) {
+                res.setDescription("Please select Appeals or Applications For Summons creation!!!");
+                res.setStatus(false);
+                res.setData(null);
+                res.setCode(ResponseCode.FAILURE);
+                return res;
+            }
+
+
+            if (mapList.size() > 0) {
+                mapList.forEach(x -> {
+                    appList.set(appList + " , " + x.get("id"));
+                });
+            }
+
+            SystemUser user = userRepository.findById(loggedUser.getInfo().getId()).get();
+
+            summons.setAppList(appList.get());
+            summons.setVenue("");
+            summons.setSummonStartDate(startDate);
+            summons.setSummonEndDate(endDate);
+            summons.setSystemUser(user);
+            summons.setCreatedDate(new Date());
+            summons.setMemberOne(req.get("memberOne"));
+            summons.setMemberTwo(req.get("memberTwo"));
+
+            Summons newSummons = summonsRepository.save(summons);
+
+
+            mapList.forEach(x -> {
+
+                Appeals appeal = appealsRepository.findById(Long.valueOf(x.get("id"))).get();
+                appeal.setDateOfTheLastOrder(lastOrderDate);
+                appealsRepository.save(appeal);
+
+                summonsAppeals.setAppealId(appeal.getAppealId().toString());
+                summonsAppeals.setSummonId(newSummons.getSummonId().toString());
+                // summonRepository.save(summonsAppeals);
+                appeal.setSummons(newSummons);
+                appealsRepository.save(appeal);
+
+
+                newSummons.setTaxType(appeal.getTax().getTaxName());
+                newSummons.setSummonNo(newSummons.getSummonId().toString());
+            });
+
+
+            summonsRepository.save(newSummons);
+            res.setCode(ResponseCode.SUCCESS);
+            res.setDescription("Summons created successfully");
+            res.setStatus(true);
+            res.setData(newSummons);
+            return res;
+        } catch (Exception e) {
+            e.printStackTrace();
+            res.setCode(ResponseCode.FAILURE);
+            res.setDescription("Error Occured");
+            res.setStatus(false);
+            return res;
+        }
+    }
+
 }
 

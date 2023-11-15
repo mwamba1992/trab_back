@@ -607,10 +607,9 @@ public class GlobalMethods {
         }else {
             reportDto.setBillId(payment.getBill().getBillReference());
         }
-
         reportDto.setControlNumber(payment.getPayCtrNum());
         reportDto.setPaidAmount(payment.getPaidAmt());
-        reportDto.setPayerName(payment.getPyrName());
+        reportDto.setPayerName(payment.getBill().getPayerName());
         reportDto.setTransactionDate(payment.getCreatedDate().toString());
         reportDto.setPspReceiptNumber(payment.getPayRefId());
         reportDto.setAmountInWords(numberToWordsUtils.convert(payment.getPaidAmt().longValue()));
@@ -627,6 +626,23 @@ public class GlobalMethods {
         String parameter = "";
         String sqlQuery = "";
         String joiner = " AND";
+
+
+        if ((!criterial.get("hearing").isEmpty()) && (criterial.get("hearing")) != null) {
+            if (criterial.get("hearing").equalsIgnoreCase("decided")) {
+                if (!parameter.isEmpty()) {
+                    parameter = parameter + joiner;
+                }
+                parameter = parameter + " d.date_of_decision is not null";
+            }
+
+            if (criterial.get("hearing").equalsIgnoreCase("pending")) {
+                if (!parameter.isEmpty()) {
+                    parameter = parameter + joiner;
+                }
+                parameter = parameter + " d.date_of_decision is null";
+            }
+        }
 
 
         if ((!criterial.get("tax").isEmpty()) && (criterial.get("tax")) != null) {
@@ -664,20 +680,41 @@ public class GlobalMethods {
         }
 
 
+
+        if (!criterial.get("decidedDateFrom").isEmpty()) {
+            if (!parameter.isEmpty()) {
+                parameter = parameter + joiner;
+            }
+            parameter = parameter + " d.date_of_decision >=:from_decided_date ";
+        }
+
+        if (!criterial.get("decidedDateTo").isEmpty()) {
+            if (!parameter.isEmpty()) {
+                parameter = parameter + joiner;
+            }
+            parameter = parameter + " d.date_of_decision <=:to_decided_date ";
+        }
+
+
+        if ((!criterial.get("chairMan").isEmpty()) && (criterial.get("chairMan")) != null) {
+            if (!parameter.isEmpty()) {
+                parameter = parameter + joiner;
+            }
+            parameter = parameter + " d.decided_by=:chairMan ";
+        }
+
         if (criterial.get("tax").isEmpty() && criterial.get("applicationTrendType").isEmpty() && criterial.get("dateFrom").isEmpty()
-                && criterial.get("dateTo").isEmpty() && criterial.get("region").isEmpty()) {
+                && criterial.get("dateTo").isEmpty() && criterial.get("region").isEmpty() && criterial.get("hearing").isEmpty()
+                &&  criterial.get("decidedDateFrom").isEmpty()&&
+                criterial.get("decidedDateTo").isEmpty() && criterial.get("chairMan").isEmpty()
+        ) {
             sqlQuery = "select * from application_register ";
             Query q = em.createNativeQuery(sqlQuery, ApplicationRegister.class);
             applicationRegisters = q.getResultList();
         } else {
             parameter = " where " + parameter;
-            sqlQuery = " select * from application_register d " + parameter;
-
-            System.out.println("###########  QUERY ##############" + sqlQuery);
-
+            sqlQuery = " select * from application_register d " + parameter +  " order by date_of_filling desc";
             Query q = em.createNativeQuery(sqlQuery, ApplicationRegister.class);
-
-
             getQueryFromSelection(criterial, q);
             if ((!criterial.get("region").isEmpty()) && (criterial.get("region")) != null) {
                 q.setParameter("region", criterial.get("region").toUpperCase());
@@ -702,11 +739,24 @@ public class GlobalMethods {
         if ((!criterial.get("dateTo").isEmpty()) && (criterial.get("dateTo")) != null) {
             q.setParameter("to_date_of_filling", criterial.get("dateTo"));
         }
-        if ((!criterial.get("wonBy").isEmpty()) && (criterial.get("wonBy")) != null) {
-            q.setParameter("won_by", criterial.get("wonBy"));
+
+        if ((!criterial.get("decidedDateFrom").isEmpty()) && (criterial.get("dateFrom")) != null) {
+            q.setParameter("from_decided_date", criterial.get("decidedDateFrom"));
         }
-        if ((!criterial.get("chairMan").isEmpty()) && (criterial.get("chairMan")) != null) {
-            q.setParameter("chairMan", criterial.get("chairMan"));
+        if ((!criterial.get("decidedDateTo").isEmpty()) && (criterial.get("decidedDateTo")) != null) {
+            q.setParameter("to_decided_date", criterial.get("decidedDateTo"));
+        }
+
+
+        if ((criterial.get("wonBy")) != null) {
+            if(!criterial.get("wonBy").isEmpty()){
+                q.setParameter("won_by", criterial.get("wonBy"));
+            }
+        }
+        if ((criterial.get("chairMan")) != null) {
+            if(!criterial.get("chairMan").isEmpty()) {
+                q.setParameter("chairMan", criterial.get("chairMan"));
+            }
         }
     }
 
@@ -763,7 +813,10 @@ public class GlobalMethods {
 
     public List<Appeals> getAppeals(Map<String, String> criterial) {
 
+
+
         System.out.println("#### Get Appeals ###");
+        TrabHelper.print(criterial);
         List<Appeals> appeals;
 
         String parameter = "";
@@ -784,6 +837,14 @@ public class GlobalMethods {
                     parameter = parameter + joiner;
                 }
                 parameter = parameter + " d.decided_date is null";
+            }
+
+
+            if (criterial.get("hearing").equalsIgnoreCase("Pending For Judgement")) {
+                if (!parameter.isEmpty()) {
+                    parameter = parameter + joiner;
+                }
+                parameter = parameter + " d.proceding_status = 'CONCLUDED'";
             }
         }
 
@@ -823,6 +884,21 @@ public class GlobalMethods {
             parameter = parameter + " d.date_of_filling <=:to_date_of_filling ";
         }
 
+
+        if (!criterial.get("decidedDateFrom").isEmpty()) {
+            if (!parameter.isEmpty()) {
+                parameter = parameter + joiner;
+            }
+            parameter = parameter + " d.decided_date >=:from_decided_date ";
+        }
+
+        if (!criterial.get("decidedDateTo").isEmpty()) {
+            if (!parameter.isEmpty()) {
+                parameter = parameter + joiner;
+            }
+            parameter = parameter + " d.decided_date <=:to_decided_date ";
+        }
+
         if ((!criterial.get("region").isEmpty()) && (criterial.get("region")) != null) {
             if (!parameter.isEmpty()) {
                 parameter = parameter + joiner;
@@ -839,13 +915,14 @@ public class GlobalMethods {
 
         if (criterial.get("tax").isEmpty() && criterial.get("applicationTrendType").isEmpty() && criterial.get("dateFrom").isEmpty()
                 && criterial.get("dateTo").isEmpty() && criterial.get("region").isEmpty() && criterial.get("wonBy").isEmpty() &&
-                criterial.get("chairMan").isEmpty()&&criterial.get("hearing").isEmpty()) {
+                criterial.get("chairMan").isEmpty()&&criterial.get("hearing").isEmpty() && criterial.get("decidedDateFrom").isEmpty()&&
+                criterial.get("decidedDateTo").isEmpty()) {
             sqlQuery = "select * from appeals";
             Query q = em.createNativeQuery(sqlQuery, Appeals.class);
             appeals = q.getResultList();
         } else {
             parameter = " where " + parameter;
-            sqlQuery = " select * from  appeals d " + parameter;
+            sqlQuery = " select * from  appeals d " + parameter + "  ORDER BY CAST(SUBSTRING_INDEX(appeal_no, '/', -1) AS UNSIGNED), CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(appeal_no, '.', -1), '/', 1) AS UNSIGNED) ";
 
             System.out.println("## " + sqlQuery);
             Query q = em.createNativeQuery(sqlQuery, Appeals.class);
@@ -1338,7 +1415,7 @@ public class GlobalMethods {
                     if (currentCell == null) {
                         rowData.add("");
                     } else {
-                        rowData.add(this.getCellValue(currentCell).replaceAll(",", ""));
+                        rowData.add(this.getCellValue(currentCell) !=null?this.getCellValue(currentCell).replaceAll(",", ""):null);
                     }
                 }
                 storedFileData.put(rowCount, rowData);
@@ -1367,8 +1444,7 @@ public class GlobalMethods {
         try {
             switch (currentCell.getCellType()) {
                 case FORMULA:
-                    cellValue = (DateUtil.isCellDateFormatted(currentCell)) ? new SimpleDateFormat("dd/MM/yyyy").
-                            format(currentCell.getDateCellValue()) : dataFormatter.formatCellValue(currentCell);
+                    cellValue = currentCell.getStringCellValue();
                     break;
                 case STRING:
                     cellValue = currentCell.getStringCellValue();
@@ -1379,14 +1455,14 @@ public class GlobalMethods {
                 case NUMERIC:
                     double doubleValue = currentCell.getNumericCellValue();
                     BigDecimal bd = new BigDecimal(Double.toString(doubleValue));
-                    long lonVal = bd.longValue();
-                    cellValue = Long.toString(lonVal).trim();
+                    cellValue = bd.toString().trim();
                     break;
                 default:
                     break;
             }
 
         } catch (Exception e) {
+            //System.out.println("Error: " + currentCell.getCellType() + " " + currentCell.getColumnIndex() + " " + currentCell.getStringCellValue());
             e.printStackTrace();
 
         }

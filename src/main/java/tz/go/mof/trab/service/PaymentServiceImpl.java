@@ -119,6 +119,16 @@ public class PaymentServiceImpl implements  PaymentService {
             parameter = parameter + " d.trx_dtm <=:generate_to ";
         }
 
+        if((!paymentSearchDto.getType().isEmpty()) && (paymentSearchDto.getType())!=null){
+            if (!parameter.isEmpty()) {
+                parameter = parameter + joiner;
+            }
+            parameter = parameter + " b.app_type =:app_type ";
+        }
+
+
+
+
         if(paymentSearchDto.getPspReference().isEmpty()&&paymentSearchDto.getGepgReference().isEmpty()&&paymentSearchDto.getPayerName().isEmpty()
         &&paymentSearchDto.getRegionCode().isEmpty()&&paymentSearchDto.getCouncilCode().isEmpty()&&paymentSearchDto.getControlNumber().isEmpty()&&
         paymentSearchDto.getDateFrom().isEmpty()&&paymentSearchDto.getDateTo().isEmpty()){
@@ -160,6 +170,15 @@ public class PaymentServiceImpl implements  PaymentService {
         if((!paymentSearchDto.getGepgReference().isEmpty()) && (paymentSearchDto.getGepgReference())!=null){
             q.setParameter("gepg_receipt", paymentSearchDto.getGepgReference());
         }
+
+        if((!paymentSearchDto.getType().isEmpty()) && (paymentSearchDto.getType())!=null){
+            if(paymentSearchDto.getType().equals("NULL")) {
+                q.setParameter("app_type", null);
+            } else{
+            q.setParameter("app_type", paymentSearchDto.getType());
+            }
+        }
+
 
 
         if((!paymentSearchDto.getCouncilCode().isEmpty()) && (paymentSearchDto.getCouncilCode())!=null){

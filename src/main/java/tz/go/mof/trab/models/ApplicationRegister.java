@@ -57,7 +57,7 @@ public class ApplicationRegister {
 	@Column(columnDefinition="LONGBLOB")
 	private String remarks;
 
-	@JsonIgnore
+
 	@OneToOne(optional = true)
 	@JoinColumn(name = "billId", nullable = true)
 	private  Bill billId;

@@ -374,6 +374,8 @@ public class AppealsServiceImpl implements AppealsService {
 
 
     public Response uploadAppealManually(Map<String, String> request){
+
+        TrabHelper.print(request);
         Appeals appeals = new Appeals();
         Response response = new Response<>();
         List < Map < String, String >> amountList;
@@ -401,11 +403,15 @@ public class AppealsServiceImpl implements AppealsService {
             appeals.setAppellantName(request.get("appellantName"));
 
             appeals.setDateOfFilling(simpleDateFormat.parse(request.get("dateFilling").split("T")[0]));
+
+            if(!request.get("decidedDate").isEmpty()){
             appeals.setDecidedDate(simpleDateFormat.parse(request.get("decidedDate").split("T")[0]));
+            }
             appeals.setStatusTrend(appealStatusTrendRepository.findAppealStatusTrendByAppealStatusTrendName(request.get("statusTrend")));
-            appeals.setDecidedBy(request.get("decidedBy"));
+
+            appeals.setDecidedBy(request.get("decidedBy")  !=null? request.get("decidedBy") : null);
             appeals.setTax(taxTypeService.findById(request.get("tax")));
-            appeals.setSummaryOfDecree(request.get("summary"));
+            appeals.setSummaryOfDecree(request.get("summary") !=null? request.get("summary") : "");
             appeals.setTinNumber(request.get("tin"));
             appeals.setPhone(request.get("phone"));
             appeals.setNatureOfAppeal(request.get("nature"));

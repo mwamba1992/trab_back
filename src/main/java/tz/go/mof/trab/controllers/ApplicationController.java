@@ -122,6 +122,9 @@ public class ApplicationController {
     @Autowired
     private GepgMiddleWare gepgMiddleWare;
 
+    @Autowired
+    TaxTypeRepository taxTypeRepository;
+
 
     @PostMapping(path = {"/internalCreate"})
     @ResponseBody
@@ -405,7 +408,10 @@ public class ApplicationController {
 
         Response<ApplicationRegister> res = new Response<ApplicationRegister>();
         try {
-            final ApplicationRegister app = this.appRepo.findByapplicationNo((String) req.get("appNo"));
+
+            TaxType taxType =  taxTypeRepository.findTaxTypeByTaxName(req.get("tax"));
+
+            final ApplicationRegister app = this.appRepo.findByapplicationNoAndTaxesId((String) req.get("appNo"), taxType.getId());
             app.setWonBy(req.get("wonBy"));
             app.setDecideBy((String) req.get("decidedBy"));
             app.setDesicionSummary(req.get("remarks").getBytes());
@@ -443,13 +449,13 @@ public class ApplicationController {
 
             appRepo.save(app);
             res.setStatus(true);
-            res.setDescription("Error occcure while editing Appeal");
+            res.setDescription("Error occurred while editing Appeal");
             res.setCode(ResponseCode.SUCCESS);
         } catch (Exception e) {
             e.printStackTrace();
             res.setStatus(false);
             res.setCode(ResponseCode.FAILURE);
-            res.setDescription("Error occcure while editing Appeal");
+            res.setDescription("Error occurred  while editing Appeal");
         }
         return res;
     }

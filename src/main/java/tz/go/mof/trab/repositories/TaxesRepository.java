@@ -19,6 +19,9 @@ public interface TaxesRepository extends PagingAndSortingRepository<Taxes, Long>
 	@Modifying
 	@Query(value = "delete from taxes where  tax_no =:tax_no", nativeQuery = true)
 	public void deleteFee(@Param("tax_no") String tax_no);
+
+
+	Taxes findTaxesByTaxName(String taxName);
 	
 	
 }

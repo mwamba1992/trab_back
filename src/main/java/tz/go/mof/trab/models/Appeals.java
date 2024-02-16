@@ -163,5 +163,9 @@ public class Appeals {
 
 	private boolean isLoaded;
 
+	private boolean initiatedForDelete = false;
+
+	private String deletedInitiatedBy = "";
+
 
 }

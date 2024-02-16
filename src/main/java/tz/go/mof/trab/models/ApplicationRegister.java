@@ -108,4 +108,7 @@ public class ApplicationRegister {
 	@JoinColumn(name = "adressId", nullable = true)
 	private Adress adressId;
 
+
+	private String applicationType;
+
 }

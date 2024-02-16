@@ -846,6 +846,15 @@ public class GlobalMethods {
                 }
                 parameter = parameter + " d.proceding_status = 'CONCLUDED'";
             }
+
+
+
+            if (criterial.get("hearing").equalsIgnoreCase("hearing")) {
+                if (!parameter.isEmpty()) {
+                    parameter = parameter + joiner;
+                }
+                parameter = parameter + " d.proceding_status is null  and summon_id is not null and  decided_date is null";
+            }
         }
 
         if ((!criterial.get("chairMan").isEmpty()) && (criterial.get("chairMan")) != null) {
@@ -1031,7 +1040,7 @@ public class GlobalMethods {
 
             AtomicReference<String> appList = new AtomicReference<>("");
             ObjectMapper mapper = new ObjectMapper();
-            List<Map<String, Integer>> mapList;
+            List<Map<String, Object>> mapList;
             SystemUser user = userRepository.findById(loggedUser.getInfo().getId()).get();
             Date startDate;
             Date endDate;
@@ -1107,19 +1116,47 @@ public class GlobalMethods {
 
                 summons.setAppeleantAdress(req.get("drawnByAdress"));
                 summons.setDrawnBy(req.get("drawnByName"));
-                summons.setAppeleant(appealsRepository.findById(Long.valueOf(mapList.get(0).get("id"))).get().getAppellantName());
+
+
+                Long idLong;
+
+                if(mapList.get(0).get("id") instanceof  String){
+                    idLong = Long.parseLong(((String) mapList.get(0).get("id")).trim());
+                }else{
+                    Integer idInt = (Integer) (mapList.get(0).get("id"));
+                    idLong = idInt.longValue();
+                }
+
+
+                // Convert the String to a Long
+
+                summons.setAppeleant(appealsRepository.findById(idLong).get().getAppellantName());
 
                 Summons newSummons = summonRepository.save(summons);
 
                 mapList.forEach(x -> {
 
-                    Appeals appeal = appealsRepository.findById(Long.valueOf(x.get("id"))).get();
+                    Long idLong2;
+
+                    if(x.get("id") instanceof  String){
+                        idLong2 = Long.parseLong(((String) x.get("id")).trim());
+                    }else{
+                        Integer idInt = (Integer) (x.get("id"));
+                        idLong2 = idInt.longValue();
+                    }
+
+                    System.out.println("id: " + idLong2);
+                    Appeals appeal = appealsRepository.findById(idLong2).get();
 
                     summonsAppeals.setAppealId(appeal.getAppealId().toString());
                     summonsAppeals.setSummonId(newSummons.getSummonId().toString());
-                   // summonRepository.save(summonsAppeals);
+
+                    //summonRepository.save(summonsAppeals);
                     appeal.setSummons(newSummons);
                     appealsRepository.save(appeal);
+
+
+                    System.out.println("appeal saved with summon: "+  newSummons.getSummonId());
 
 
                     newSummons.setTaxType(appeal.getTax().getTaxName());
@@ -1140,7 +1177,17 @@ public class GlobalMethods {
 
 
                 mapList.forEach(x -> {
-                    ApplicationRegister application = applicationRegisterRepository.findById(Long.valueOf(x.get("id"))).get();
+
+                    Long idLong2;
+
+                    if(x.get("id") instanceof  String){
+                        idLong2 = Long.parseLong(((String) x.get("id")).trim());
+                    }else{
+                        Integer idInt = (Integer) (x.get("id"));
+                        idLong2 = idInt.longValue();
+                    }
+
+                    ApplicationRegister application = applicationRegisterRepository.findById(idLong2).get();
                     summonsAppeals.setAppealId(application.getApplicationId().toString());
                     summonsAppeals.setSummonId(newSummons.getSummonId().toString());
                    // summonRepository.save(summonsAppeals);
@@ -1150,13 +1197,13 @@ public class GlobalMethods {
                         newSummons.setAppeleantAdress("P.O BOX 11491 DAR-ES-SALAAM");
 
                         newSummons.setRespondentAdress(req.get("drawnByAdress"));
-                        newSummons.setRespondent(applicationRegisterRepository.findById(Long.valueOf(mapList.get(0).get("id"))).get().getApplicant().getFirstName());
+                        newSummons.setRespondent(applicationRegisterRepository.findById(idLong2).get().getApplicant().getFirstName());
                     } else {
                         newSummons.setRespondent("COMM GENERAL");
                         newSummons.setRespondentAdress("P.O BOX 11491 DAR-ES-SALAAM");
 
                         newSummons.setAppeleantAdress(req.get("drawnByAdress"));
-                        newSummons.setAppeleant(applicationRegisterRepository.findById(Long.valueOf(mapList.get(0).get("id"))).get().getApplicant().getFirstName());
+                        newSummons.setAppeleant(applicationRegisterRepository.findById(idLong2).get().getApplicant().getFirstName());
                     }
 
                     application.setSummons(newSummons);

@@ -110,5 +110,8 @@ public interface AppealsRepository extends PagingAndSortingRepository<Appeals, L
 	@Query("SELECT a FROM Appeals a WHERE a.procedingStatus = 'CONCLUDED'")
 	List <Appeals> findAppealsByProcedingStatus();
 
+
+	List<Appeals> findAppealsByInitiatedForDeleteTrue();
+
 	}
 

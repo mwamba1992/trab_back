@@ -2,6 +2,7 @@ package tz.go.mof.trab.service;
 
 
 import java.io.*;
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -11,6 +12,9 @@ import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.engine.export.ooxml.JRXlsxExporter;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,17 +27,12 @@ import tz.go.mof.trab.dto.bill.*;
 import tz.go.mof.trab.dto.payment.PaymentSearchDto;
 import tz.go.mof.trab.dto.payment.PaymentSummaryDto;
 import tz.go.mof.trab.dto.report.SummonDto;
-import tz.go.mof.trab.models.Bill;
-import tz.go.mof.trab.models.BillSummary;
-import tz.go.mof.trab.models.Payment;
-import tz.go.mof.trab.models.Summons;
+import tz.go.mof.trab.models.*;
 import tz.go.mof.trab.repositories.AppealsRepository;
 import tz.go.mof.trab.repositories.ApplicationRegisterRepository;
 import tz.go.mof.trab.repositories.SummonsRepository;
-import tz.go.mof.trab.utils.GlobalMethods;
+import tz.go.mof.trab.utils.*;
 import tz.go.mof.trab.utils.Response;
-import tz.go.mof.trab.utils.ResponseCode;
-import tz.go.mof.trab.utils.TrabHelper;
 
 
 @Service
@@ -65,6 +64,9 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
     @Autowired
     private GlobalMethods globalMethods;
+
+    @Autowired
+    private ExcelFileCreator excelFileCreator;
 
     @Autowired
     private ApplicationRegisterRepository applicationRegisterRepository;
@@ -767,6 +769,94 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             response.setStatus(true);
         }
         return response;
+    }
+
+    @Override
+    public Response<String> getExcelAppealReport(List<Appeals> appealsList, String details) throws IOException {
+
+        excelFileCreator.newReportExcel();
+
+
+        // font style content
+
+
+
+        String[] headers = new String[]{"APPEAL NO", "TAX TYPE", "TZS", "USD", "APPEALLANT", "RESPONDENT",
+                "DATE OF FILLING", "NATURE OF APPEAL", "DATE OF DECISION", "FINDINGS", "REMARKS"};
+
+
+        excelFileCreator.writeTableHeaderExcel("Appeal Report", "Tax Revenue Appeals Board (TRAB) \n Appeals \n" +  details
+                , headers);
+
+
+        CellStyle style = excelFileCreator.getFontContentExcel();
+
+        // starting write on row
+        int startRow = 2;
+
+        for(Appeals  appeal: appealsList){
+            Row row = excelFileCreator.sheet.createRow(startRow++);
+            int columnCount = 0;
+
+
+            BigDecimal tzsAmount = new BigDecimal(0);
+            BigDecimal usdAmount = new BigDecimal(0);
+
+            for (AppealAmount amount : appeal.getAppealAmount()) {
+                if (amount.getCurrency().getCurrencyShortName().equals("TZS")) {
+                    tzsAmount = tzsAmount.add(amount.getAmountOnDispute());
+                } else if (amount.getCurrency().getCurrencyShortName().equals("USD")) {
+                    usdAmount = usdAmount.add(amount.getAmountOnDispute());
+                }
+            }
+
+            String decidedBy = "";
+
+            if ((appeal.getSummons() != null)){
+                decidedBy = appeal.getSummons().getJudge().toUpperCase();
+            } else if (appeal.getCreatedBy() != null && appeal.getCreatedBy()
+                    .equalsIgnoreCase("System Created")) {
+                decidedBy = appeal.getDecidedBy().toUpperCase();
+            } else if (appeal.getDecidedBy() !=null) {
+                decidedBy = appeal.getDecidedBy().toUpperCase();
+            }
+
+            DateFormat outputFormat = new SimpleDateFormat("MMM d, yyyy");
+
+
+            excelFileCreator.createCell(row, columnCount++, appeal.getAppealNo(), style);
+            excelFileCreator.createCell(row, columnCount++, appeal.getTax().getTaxName().toUpperCase(), style);
+            excelFileCreator.createCell(row, columnCount++,  tzsAmount, style);
+            excelFileCreator.createCell(row, columnCount++,  usdAmount, style);
+            excelFileCreator.createCell(row, columnCount++, appeal.getAppellantName(), style);
+            excelFileCreator.createCell(row, columnCount++,  "COMM GENERAL", style);
+            excelFileCreator.createCell(row, columnCount++, outputFormat.format(appeal.getDateOfFilling()), style);
+            excelFileCreator.createCell(row, columnCount++, appeal.getNatureOfAppeal(), style);
+            excelFileCreator.createCell(row, columnCount++,  appeal.getDecidedDate() !=null?outputFormat.format(appeal.getDecidedDate()):"", style);
+            excelFileCreator.createCell(row, columnCount++, appeal.getStatusTrend().getAppealStatusTrendName(), style);
+            excelFileCreator.createCell(row, columnCount++, decidedBy,style);
+            excelFileCreator.createCell(row, columnCount++, appeal.getSummaryOfDecree() !=null?
+                    appeal.getSummaryOfDecree().toUpperCase():"NO REMARKS",style);
+        }
+
+
+        // Convert the workbook to a byte array
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        excelFileCreator.workbook.write(byteArrayOutputStream);
+        byte[] workbookBytes = byteArrayOutputStream.toByteArray();
+
+        // Close the workbook
+        excelFileCreator.workbook.close();
+
+        // Convert byte array to base64 string
+        String base64String = java.util.Base64.getEncoder().encodeToString(workbookBytes);
+
+
+        response.setDescription("Success");
+        response.setData(base64String);
+        response.setCode(ResponseCode.SUCCESS);
+        return response;
+
     }
 
 }

@@ -123,7 +123,13 @@ public class PaymentServiceImpl implements  PaymentService {
             if (!parameter.isEmpty()) {
                 parameter = parameter + joiner;
             }
-            parameter = parameter + " b.app_type =:app_type ";
+
+            if(paymentSearchDto.equals("XXXX")){
+                 parameter = parameter + "b.app_type is null";
+            }else{
+                parameter = parameter + " b.app_type =:app_type ";
+            }
+
         }
 
 
@@ -172,8 +178,7 @@ public class PaymentServiceImpl implements  PaymentService {
         }
 
         if((!paymentSearchDto.getType().isEmpty()) && (paymentSearchDto.getType())!=null){
-            if(paymentSearchDto.getType().equals("NULL")) {
-                q.setParameter("app_type", null);
+            if(paymentSearchDto.getType().equals("XXXX")) {
             } else{
             q.setParameter("app_type", paymentSearchDto.getType());
             }
@@ -209,22 +214,24 @@ public class PaymentServiceImpl implements  PaymentService {
             if (!parameter.isEmpty()) {
                 parameter = parameter + joiner;
             }
-            parameter = parameter + " d.trx_dtm >=:generated_date ";
+            parameter = parameter + " p.trx_dtm >=:generated_date ";
         }
 
         if((!paymentSearchDto.getDateTo().isEmpty()) && (paymentSearchDto.getDateTo())!=null){
             if (!parameter.isEmpty()) {
                 parameter = parameter + joiner;
             }
-            parameter = parameter + " d.trx_dtm <=:generate_to ";
+            parameter = parameter + " p.trx_dtm <=:generate_to ";
         }
 
         if(paymentSearchDto.getDateTo().isEmpty()&&
                 paymentSearchDto.getDateFrom().isEmpty()){
-            sqlQuery = " SELECT SUM(paid_amt), bi.gsf_code, bi.source_name FROM payment py JOIN bill_item bi ON py.bill_id = bi.bill_id " +
-                    "GROUP BY bi.gsf_code ORDER BY SUM(paid_amt) DESC";
+
+            sqlQuery = "select sum(p.paid_amt), app_type from payment p JOIN bill b ON p.bill_id = b.bill_id  group by app_type order by  sum(p.paid_amt)  desc;";
+
         }else {
             parameter = " where " + parameter;
+            sqlQuery = "select sum(p.paid_amt), app_type from payment p JOIN bill b ON p.bill_id = b.bill_id " + parameter  + " group by app_type  order by  sum(p.paid_amt)  desc ; ";
 
         }
 
@@ -248,8 +255,8 @@ public class PaymentServiceImpl implements  PaymentService {
                 PaymentSummaryDto paymentSummaryResponseDto = new PaymentSummaryDto();
                 Object[] fields = (Object[]) o;
                 BigDecimal paidAmount = (BigDecimal) fields[0];
-                String gfsCode = (String) fields[1];
-                String gfsName = (String) fields[2];
+                String gfsCode = fields[1] == null || ((String) fields[1]).equalsIgnoreCase("null") ?"OTHER BILL": (String) fields[1];
+                String gfsName = gfsCode;
 
                 paymentSummaryResponseDto.setCollectedAmount(paidAmount);
                 paymentSummaryResponseDto.setGfsCode(gfsCode);

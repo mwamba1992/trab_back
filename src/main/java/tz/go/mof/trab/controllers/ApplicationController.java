@@ -17,9 +17,8 @@ import java.io.File;
 import java.io.IOException;
 import java.math.*;
 import tz.go.mof.trab.models.*;
-import tz.go.mof.trab.dto.bill.*;
+
 import java.text.*;
-import org.apache.commons.lang3.*;
 import javax.xml.bind.*;
 import org.springframework.web.bind.annotation.*;
 import tz.go.mof.trab.utils.Response;
@@ -113,6 +112,12 @@ public class ApplicationController {
     private ManualApplicationSequenceRepository manualApplicationSequenceRepository;
 
     @Autowired
+    private ManualBillRepository manualBillRepository;
+
+    @Autowired
+    private ManualExecutionlRepository manualExecutionlRepository;
+
+    @Autowired
     private ApplicationStatusTrendRepository applicationStatusTrendRepository;
 
 
@@ -140,6 +145,8 @@ public class ApplicationController {
 
         TrabHelper.print(req);
         try {
+
+
 
 
 
@@ -173,9 +180,11 @@ public class ApplicationController {
             }
 
 
+
             if (req.get("type").equals("1")) {
 
                 ApplicationRegister register = new ApplicationRegister();
+                register.setApplicationType(req.get("applicationType"));
                 register.setType("1");
 
                 register.setAction("1");
@@ -205,7 +214,7 @@ public class ApplicationController {
                 register.setApplicationNo("");
                 register.setStatusTrend(applicationStatusTrendRepository.findApplicationStatusTrendByApplicationStatusTrendName("NEW"));
 
-                getApplicationNumber(req, res, currentYear, register, region);
+                getApplicationNumber(req, res, currentYear, register, region, req.get("applicationType"));
 
                 return  res;
 
@@ -258,6 +267,7 @@ public class ApplicationController {
                 TrabHelper.print(adress);
 
                 register.setAdressId(adressRepository.save(adress));
+                register.setApplicationType(req.get("applicationType"));
 
                 register.setAction("1");
                 register.setCreatedBy(loggedUser.getInfo().getName());
@@ -357,7 +367,7 @@ public class ApplicationController {
                     register.setBillId(newBill);
                     register.setApplicationNo("");
 
-                    getApplicationNumber(req, res, currentYear, register, region);
+                    getApplicationNumber(req, res, currentYear, register, region, req.get("applicationType"));
                 }else{
                     res.setDescription("Errors code received from gepg is: ");
                     res.setStatus(false);
@@ -374,22 +384,70 @@ public class ApplicationController {
         return res;
     }
 
-    private void getApplicationNumber(@RequestBody Map<String, String> req, Response<ApplicationRegister> res, int currentYear, ApplicationRegister register, Region region) {
-        ManualApplicationSequence manualApplicationSequence = manualApplicationSequenceRepository.findAll().get(0);
+    private void getApplicationNumber(@RequestBody
+                                      Map<String, String> req,
+                                      Response<ApplicationRegister> res,
+                                      int currentYear,
+                                      ApplicationRegister register,
+                                      Region region, String applicationType) {
 
-        if(taxTypeService.findById(req.get("tax")).getTaxName().equals("VAT")) {
-            register.setApplicationNo(region.getCode().toUpperCase() + "." +manualApplicationSequence.getVatSequence() + "/" + currentYear);
-            manualApplicationSequence.setVatSequence(manualApplicationSequence.getVatSequence()+1);
-            manualApplicationSequenceRepository.save(manualApplicationSequence);
-        }else if(taxTypeService.findById(req.get("tax")).getTaxName().equals("CUSTOM AND EXCISE")){
-            register.setApplicationNo(region.getCode().toUpperCase() + "." +manualApplicationSequence.getCustomSequence() + "/" + currentYear);
-            manualApplicationSequence.setCustomSequence(manualApplicationSequence.getCustomSequence()+1);
-            manualApplicationSequenceRepository.save(manualApplicationSequence);
-        }else if(taxTypeService.findById(req.get("tax")).getTaxName().equals("INCOME TAX")){
-            register.setApplicationNo(region.getCode().toUpperCase() + "." +manualApplicationSequence.getIncomeSequence() + "/" + currentYear);
-            manualApplicationSequence.setIncomeSequence(manualApplicationSequence.getIncomeSequence()+1);
-            manualApplicationSequenceRepository.save(manualApplicationSequence);
+
+
+        if(applicationType.equals("1")) {
+            ManualApplicationSequence manualApplicationSequence = manualApplicationSequenceRepository.findAll().get(0);
+            if (taxTypeService.findById(req.get("tax")).getTaxName().equals("VAT")) {
+                register.setApplicationNo(region.getCode().toUpperCase() + "." + manualApplicationSequence.getVatSequence() + "/" + currentYear);
+                manualApplicationSequence.setVatSequence(manualApplicationSequence.getVatSequence() + 1);
+                manualApplicationSequenceRepository.save(manualApplicationSequence);
+            } else if (taxTypeService.findById(req.get("tax")).getTaxName().equals("CUSTOM AND EXCISE")) {
+                register.setApplicationNo(region.getCode().toUpperCase() + "." + manualApplicationSequence.getCustomSequence() + "/" + currentYear);
+                manualApplicationSequence.setCustomSequence(manualApplicationSequence.getCustomSequence() + 1);
+                manualApplicationSequenceRepository.save(manualApplicationSequence);
+            } else if (taxTypeService.findById(req.get("tax")).getTaxName().equals("INCOME TAX")) {
+                register.setApplicationNo(region.getCode().toUpperCase() + "." + manualApplicationSequence.getIncomeSequence() + "/" + currentYear);
+                manualApplicationSequence.setIncomeSequence(manualApplicationSequence.getIncomeSequence() + 1);
+                manualApplicationSequenceRepository.save(manualApplicationSequence);
+            }
+
         }
+
+        if(applicationType.equals("2")) {
+            ManualSequenceBill manualSequenceBill = manualBillRepository.findAll().get(0);
+            if (taxTypeService.findById(req.get("tax")).getTaxName().equals("VAT")) {
+                register.setApplicationNo(region.getCode().toUpperCase() + "." + manualSequenceBill.getVatSequence() + "/" + currentYear);
+                manualSequenceBill.setVatSequence(manualSequenceBill.getVatSequence() + 1);
+                manualBillRepository.save(manualSequenceBill);
+            } else if (taxTypeService.findById(req.get("tax")).getTaxName().equals("CUSTOM AND EXCISE")) {
+                register.setApplicationNo(region.getCode().toUpperCase() + "." + manualSequenceBill.getCustomSequence() + "/" + currentYear);
+                manualSequenceBill.setCustomSequence(manualSequenceBill.getCustomSequence() + 1);
+                manualBillRepository.save(manualSequenceBill);
+            } else if (taxTypeService.findById(req.get("tax")).getTaxName().equals("INCOME TAX")) {
+                register.setApplicationNo(region.getCode().toUpperCase() + "." + manualSequenceBill.getIncomeSequence() + "/" + currentYear);
+                manualSequenceBill.setIncomeSequence(manualSequenceBill.getIncomeSequence() + 1);
+                manualBillRepository.save(manualSequenceBill);
+            }
+
+        }
+
+        if(applicationType.equals("3")) {
+            ManualSequenceExecution manualSequenceExecution = manualExecutionlRepository.findAll().get(0);
+            if (taxTypeService.findById(req.get("tax")).getTaxName().equals("VAT")) {
+                register.setApplicationNo(region.getCode().toUpperCase() + "." + manualSequenceExecution.getVatSequence() + "/" + currentYear);
+                manualSequenceExecution.setVatSequence(manualSequenceExecution.getVatSequence() + 1);
+                manualExecutionlRepository.save(manualSequenceExecution);
+            } else if (taxTypeService.findById(req.get("tax")).getTaxName().equals("CUSTOM AND EXCISE")) {
+                register.setApplicationNo(region.getCode().toUpperCase() + "." + manualSequenceExecution.getCustomSequence() + "/" + currentYear);
+                manualSequenceExecution.setCustomSequence(manualSequenceExecution.getCustomSequence() + 1);
+                manualExecutionlRepository.save(manualSequenceExecution);
+            } else if (taxTypeService.findById(req.get("tax")).getTaxName().equals("INCOME TAX")) {
+                register.setApplicationNo(region.getCode().toUpperCase() + "." + manualSequenceExecution.getIncomeSequence() + "/" + currentYear);
+                manualSequenceExecution.setIncomeSequence(manualSequenceExecution.getIncomeSequence() + 1);
+                manualExecutionlRepository.save(manualSequenceExecution);
+            }
+
+        }
+
+
 
         ApplicationRegister newApp = appRepo.save(register);
 

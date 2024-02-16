@@ -541,8 +541,8 @@ public class ReportController {
                             appealDto.setDecidedBy(app.getSummons().getJudge().toUpperCase());
                         } else if (app.getCreatedBy() != null && app.getCreatedBy().equalsIgnoreCase("System Created")) {
                             appealDto.setDecidedBy(app.getDecidedBy().toUpperCase());
-                        }  else {
-                            appealDto.setDecidedBy("NONE");
+                        } else if (app.getDecidedBy() !=null) {
+                            appealDto.setDecidedBy(app.getDecidedBy().toUpperCase());
                         }
                     } else {
                         appealDto.setDecidedBy("NONE");
@@ -611,16 +611,18 @@ public class ReportController {
                     byte[] fileContent = JasperExportManager.exportReportToPdf(jasperPrint);
                     contentToSend = Base64.getEncoder().encodeToString(fileContent);
                 } else {
-                    JRXlsxExporter exporter = new JRXlsxExporter();
-                    exporter.setParameter(JRExporterParameter.JASPER_PRINT, jasperPrint);
-                    exporter.setParameter(JRExporterParameter.OUTPUT_FILE_NAME, REPORT_DESIGN_PATH + "appeals2.xlsx");
-                    exporter.exportReport();
-                    File excellFile;
-                    excellFile = new File(REPORT_DESIGN_PATH + "appeals2.xlsx");
 
-
-                    byte[] fileContent = FileUtils.readFileToByteArray(excellFile);
-                    contentToSend = Base64.getEncoder().encodeToString(fileContent);
+                    return  reportsGeneratorService.getExcelAppealReport(appeals, details);
+//                    JRXlsxExporter exporter = new JRXlsxExporter();
+//                    exporter.setParameter(JRExporterParameter.JASPER_PRINT, jasperPrint);
+//                    exporter.setParameter(JRExporterParameter.OUTPUT_FILE_NAME, REPORT_DESIGN_PATH + "appeals2.xlsx");
+//                    exporter.exportReport();
+//                    File excellFile;
+//                    excellFile = new File(REPORT_DESIGN_PATH + "appeals2.xlsx");
+//
+//
+//                    byte[] fileContent = FileUtils.readFileToByteArray(excellFile);
+//                    contentToSend = Base64.getEncoder().encodeToString(fileContent);
                 }
                 response.setDescription("Success");
                 response.setData(contentToSend);
@@ -717,7 +719,8 @@ public class ReportController {
 
         Pageable paging = PageRequest.of(0, 10000, Sort.by("noticeId").descending());
         SimpleDateFormat dmyFormat = new SimpleDateFormat("yyyy-MM-dd");
-       return noticeRepository.findAllByLoggedAtBetween(dmyFormat.parse(req.get("dateFrom")),  dmyFormat.parse(req.get("dateTo")), paging);
+       return noticeRepository.findAllByLoggedAtBetween(
+               dmyFormat.parse(req.get("dateFrom")),  dmyFormat.parse(req.get("dateTo")), paging);
 
 
     }
@@ -729,7 +732,8 @@ public class ReportController {
 
         Pageable paging = PageRequest.of(0, 10000, Sort.by("applicationId").descending());
         SimpleDateFormat dmyFormat = new SimpleDateFormat("yyyy-MM-dd");
-        return applicationRegisterRepository.findApplicationRegistersByDateOfFillingBetween(dmyFormat.parse(req.get("dateFrom")),  dmyFormat.parse(req.get("dateTo")), paging);
+        return applicationRegisterRepository.findApplicationRegistersByDateOfFillingBetween(
+                dmyFormat.parse(req.get("dateFrom")),  dmyFormat.parse(req.get("dateTo")), paging);
 
 
     }

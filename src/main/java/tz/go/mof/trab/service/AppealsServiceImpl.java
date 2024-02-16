@@ -97,6 +97,7 @@ public class AppealsServiceImpl implements AppealsService {
         TrabHelper.print(request);
 
         Response < Appeals > res = new Response < > ();
+        final int currentYear = new Date().getYear() + 1900;
 
         try {
             ObjectMapper mapper = new ObjectMapper();
@@ -289,8 +290,6 @@ public class AppealsServiceImpl implements AppealsService {
 
 
                     ManualAppealsSequence manualAppealsSequence = manualAppealsSequenceRepository.findAll().get(0);
-                    int currentYear = notice.getLoggedAt().getYear() + 1900;
-
                     if(taxTypeService.findById(request.get("typeOfTax")).getTaxName().equals("VAT")) {
                         app.setAppealNo(request.get("region").toUpperCase().toUpperCase() + "." +
                                 manualAppealsSequence.getVatSequence()+ "/" + currentYear);

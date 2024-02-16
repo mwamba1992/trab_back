@@ -8,9 +8,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jayway.jsonpath.internal.function.numeric.Sum;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -64,6 +62,14 @@ public class AppealController {
 
 
     private TaxTypeRepository taxTypeRepository;
+
+
+    private DeletedAppealRepository deletedAppealRepository;
+
+    @Autowired
+    void setDeletedAppealRepository(DeletedAppealRepository deletedAppealRepository){
+        this.deletedAppealRepository = deletedAppealRepository;
+    }
 
 
     @Autowired
@@ -753,5 +759,85 @@ public class AppealController {
         }
     }
 
+
+
+    @GetMapping(value = "/mark-delete-appeal/{id}", produces = "application/json")
+    @ResponseBody
+    public Response  markForDelete(@PathVariable("id") Long id){
+        Response response  = new Response();
+
+        try {
+
+            Appeals appeal = appealsRepository.findById(id).get();
+
+            if (appeal == null) {
+                response.setCode(ResponseCode.FAILURE);
+                response.setStatus(false);
+                response.setDescription("Appeal Doesnt exist");
+            }
+
+            appeal.setInitiatedForDelete(true);
+            appeal.setDeletedInitiatedBy(loggedUser.getInfo().getUsername());
+            appealsRepository.save(appeal);
+
+            response.setCode(ResponseCode.SUCCESS);
+            response.setStatus(true);
+            response.setDescription("Appeal No " + appeal.getAppealNo() + " " +
+                    appeal.getTax().getTaxName()+ " " + appeal.getAppellantName() + "  " +
+                    "Create a delete request !!!!");
+
+            return response;
+
+        }catch (Exception  e){
+             e.printStackTrace();
+             response.setCode(ResponseCode.FAILURE);
+             response.setStatus(false);
+             response.setDescription("System issue you can perform this now");
+             return response;
+        }
+    }
+
+    @GetMapping(value = "/delete-appeal/{id}", produces = "application/json")
+    @ResponseBody
+    public Response  deleteAppeal(@PathVariable("id") Long id){
+
+        Response response = new Response();
+
+        try {
+            Appeals appeal = appealsRepository.findById(id).get();
+
+            if (appeal == null) {
+                response.setCode(ResponseCode.FAILURE);
+                response.setStatus(false);
+                response.setDescription("Appeal Doesnt exist");
+            }
+
+            List<AppealAmount> appealAmounts = appealAmountRepository.findAppealAmountByAppealId(id);
+
+            for (AppealAmount appealAmount: appealAmounts){
+                appealAmountRepository.delete(appealAmount);
+            }
+
+            appealsRepository.delete(appeal);
+            response.setStatus(true);
+            response.setCode(ResponseCode.SUCCESS);
+            response.setDescription("Appeal No " + appeal.getAppealNo() + " " +
+                    appeal.getTax().getTaxName()+ " " + appeal.getAppellantName() + "  " +
+                    "Deleted and backUp successful");
+
+            DeletedAppeals deletedAppeals = new DeletedAppeals();
+            TrabHelper.copyNonNullProperties(appeal, deletedAppeals);
+            deletedAppealRepository.save(deletedAppeals);
+
+
+            return response;
+        }catch (Exception  e){
+             e.printStackTrace();
+             response.setCode(ResponseCode.FAILURE);
+             response.setStatus(false);
+             response.setDescription("Sytem issue you can pefom this now");
+             return response;
+        }
+    }
 }
 

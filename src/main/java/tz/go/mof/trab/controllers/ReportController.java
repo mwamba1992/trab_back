@@ -80,6 +80,9 @@ public class ReportController {
 
     Locale currentLocale = LocaleContextHolder.getLocale();
 
+
+
+
     @GetMapping("/format/{format}/payment/payment-id/{paymentId}")
     @ResponseBody
     public Response<String> paymentReceipt(@PathVariable("paymentId") String paymentId) {
@@ -116,11 +119,24 @@ public class ReportController {
             });
 
 
+            Map<String, List<BillItemsReportDto>> listOfBillItemsGrouped =
+                    paymentItemsReportDtos.stream().collect(Collectors.groupingBy(w -> w.getGovernmentFinancialStatisticsDescription()));
+
+
+            List<BillItemsReportDto> newBillItemsReportDtos = new ArrayList<>();
+            listOfBillItemsGrouped.forEach((k,v) -> {
+                        BillItemsReportDto dto = new BillItemsReportDto();
+                        dto.setGovernmentFinancialStatisticsDescription(v.size() + " x " + v.get(0).getGovernmentFinancialStatisticsDescription());
+                        dto.setItemBilledAmount(String.valueOf(v.size()*Double.valueOf(v.get(0).getItemBilledAmount())));
+                newBillItemsReportDtos.add(dto);
+                    }
+            );
+
             JRDataSource reportDataSource = new JRBeanCollectionDataSource(paymentReport);
             Map<String, Object> parameters = new HashMap<String, Object>();
             parameters.put("coat", REPORT_IMG);
             parameters.put("paymentSubreport", paymentSubreport);
-            parameters.put("billItems", paymentItemsReportDtos);
+            parameters.put("billItems", newBillItemsReportDtos);
 
             File paymentReportTemplate = new File(REPORT_DESIGN_PATH + "payment.jrxml");
             JasperReport jasperReport = JasperCompileManager.compileReport(paymentReportTemplate.getAbsolutePath());
@@ -205,8 +221,6 @@ public class ReportController {
                     );
 
 
-            System.out.println("######### list of bill items ############");
-            TrabHelper.print(listOfBillItemsGrouped);
 
 
 
@@ -371,18 +385,7 @@ public class ReportController {
                     byte[] fileContent = JasperExportManager.exportReportToPdf(jasperPrint);
                     contentToSend = Base64.getEncoder().encodeToString(fileContent);
                 } else {
-                    JRXlsxExporter exporter = new JRXlsxExporter();
-                    exporter.setParameter(JRExporterParameter.JASPER_PRINT, jasperPrint);
-
-                    exporter.setParameter(JRExporterParameter.OUTPUT_FILE_NAME, REPORT_DESIGN_PATH + "applications2.xlsx");
-
-                    exporter.exportReport();
-                    File excellFile;
-                    excellFile = new File(REPORT_DESIGN_PATH + "applications2.xlsx");
-
-
-                    byte[] fileContent = FileUtils.readFileToByteArray(excellFile);
-                    contentToSend = Base64.getEncoder().encodeToString(fileContent);
+                   return globalMethods.getApplications(applicationRegisters);
                 }
 
                 response.setDescription("Success");
@@ -544,10 +547,7 @@ public class ReportController {
                         } else if (app.getDecidedBy() !=null) {
                             appealDto.setDecidedBy(app.getDecidedBy().toUpperCase());
                         }
-                    } else {
-                        appealDto.setDecidedBy("NONE");
                     }
-
                     appealDto.setNatureOfAppeal(app.getNatureOfAppeal());
                     appealDto.setDecidedDate(app.getDecidedDate());
                     appealDto.setTax(app.getTax().getTaxName());
@@ -673,6 +673,8 @@ public class ReportController {
             throws JRException, IOException {
         return reportsGeneratorService.getBillSummary(reportFormat, billSummaryReportDto, false);
     }
+
+
 
 
     @RequestMapping(value = "/format/{format}/defaulter-report/", method = RequestMethod.POST, produces = "application/json")

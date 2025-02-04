@@ -73,6 +73,7 @@ public class GepgMiddleWare {
 
     public boolean sendRequestToGepg(Bill bill) {
 
+
         try {
 
             Hashtable<String, String> hashtable = new Hashtable<>();
@@ -106,7 +107,7 @@ public class GepgMiddleWare {
                     new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(bill.getGeneratedDate().getTime()));
             billMapperDetailsDto.setUser(bill.getApprovedBy());
             billMapperDetailsDto.setApprovedBy(bill.getApprovedBy());
-            billMapperDetailsDto.setPayerPhone(bill.getPayerPhone());
+            billMapperDetailsDto.setPayerPhone(bill.getPayerPhone().contains(",")? bill.getPayerPhone().split(",")[0]:bill.getPayerPhone());
             billMapperDetailsDto.setPayerEmail(bill.getPayerEmail());
             billMapperDetailsDto.setCurrency(bill.getCurrency());
             billMapperDetailsDto.setBillEquivalentAmount(bill.getBillEquivalentAmount());

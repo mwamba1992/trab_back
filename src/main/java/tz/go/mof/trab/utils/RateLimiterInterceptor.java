@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 public class RateLimiterInterceptor implements HandlerInterceptor {
 
-    private final RateLimiter rateLimiter = new RateLimiter(10, TimeUnit.SECONDS);
+    private final RateLimiter rateLimiter = new RateLimiter(2, TimeUnit.SECONDS);
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {

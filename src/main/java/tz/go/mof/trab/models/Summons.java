@@ -84,5 +84,7 @@ public class Summons {
     private String drawnBy;
 
 
+    @OneToMany(mappedBy = "summons", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<JudgeHistory> judgeHistory;
 
 }

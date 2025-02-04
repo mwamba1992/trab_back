@@ -9,16 +9,16 @@ import tz.go.mof.trab.utils.Response;
 public interface JudgeService {
 
 
-    public Judge findById(String judgeId);
+    Judge findById(String judgeId);
 
-    public ListResponse<Judge> findAllJudges();
+    ListResponse<Judge> findAllJudges();
 
-    public Response<Judge> getOneJudge(String judgeId);
+    Response<Judge> getOneJudge(String judgeId);
 
-    public Response<Judge>  saveJudge(JudgeDto judgeDto);
+    Response<Judge>  saveJudge(JudgeDto judgeDto);
 
-    public Response<Judge>  editJudge(JudgeDto judgeDto, String judgeId);
+    Response<Judge>  editJudge(JudgeDto judgeDto, String judgeId);
 
-    public Response<Judge> deleteJudge(String judgeId);
+    Response<Judge> deleteJudge(String judgeId);
 
 }

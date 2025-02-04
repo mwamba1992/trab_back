@@ -65,6 +65,9 @@ public class AppealsServiceImpl implements AppealsService {
     @Autowired
     private GepgMiddleWare gepgMiddleWare;
 
+    @Autowired
+    private DecisionHistoryRepository decisionHistoryRepository;
+
 
     AppealsServiceImpl(AppealStatusTrendRepository appealStatusTrendRepository,
                        GfsService gfsService, TaxTypeService taxTypeService, AppealsAmountRepository appealsAmountRepository,
@@ -109,7 +112,7 @@ public class AppealsServiceImpl implements AppealsService {
             Appeals app = new Appeals();
             Bill bill = new Bill();
 
-            SystemUser user = userRepository.findById(loggedUser.getInfo().getId()).get();
+            // SystemUser user = userRepository.findById(loggedUser.getInfo().getId()).get();
             Notice notice = noticeRepository.findBynoticeNo(request.get("invoiceNo"));
 
 
@@ -121,7 +124,12 @@ public class AppealsServiceImpl implements AppealsService {
 
             long diff = globalMethods.getDifferenceInDays(noticeDate, new Date());
 
-            if (diff < 45) {
+
+            System.out.println("Difference in days: " + diff);
+            System.out.println("Exempted: " + notice.isExemptedToFilled());
+            System.out.println("Reason: " + notice.getReasonToBeExempted());
+
+            if (diff < 45 || !notice.getReasonToBeExempted().isEmpty()) {
 
                 Optional < Fees > appealFee = feesRepository.findById("STATEMENT");
                 Optional < Fees > witnessFee = feesRepository.findById("WITNESS");
@@ -159,7 +167,7 @@ public class AppealsServiceImpl implements AppealsService {
                 app.setTinNumber(request.get("tinNumber"));
                 app.setNatOfBus(request.get("natOf"));
                 app.setAction("1");
-                app.setCreatedBy(loggedUser.getInfo().getName());
+                app.setCreatedBy("neema.mwandu");
 
 
                 globalMethods.saveAppellant(request, notice);
@@ -200,7 +208,7 @@ public class AppealsServiceImpl implements AppealsService {
                 bill.setPayerEmail(request.get("email") !=null? request.get("email") : "");
                 bill.setPayerPhone(request.get("phone")!=null?request.get("phone").replace("-", ""):"0753107301");
                 bill.setExpiryDate(getBillExpireDate());
-                bill.setApprovedBy(loggedUser.getInfo().getName());
+                bill.setApprovedBy("neema mwandu");
                 bill.setCurrency(currencyRepository.findByCurrencyShortName("TZS").getCurrencyShortName());
                 bill.setSpSystemId(systemId);
                 bill.setGeneratedDate(new java.sql.Date(new java.util.Date().getTime()));
@@ -319,6 +327,8 @@ public class AppealsServiceImpl implements AppealsService {
                     res.setData(app);
                     res.setCode(ResponseCode.SUCCESS);
                 } else {
+
+                    System.out.println("Failed to send request to GEPG");
                     res.setStatus(false);
                     res.setDescription("Problem occurred Please Contact Support! ");
                     res.setCode(ResponseCode.FAILURE);
@@ -330,8 +340,12 @@ public class AppealsServiceImpl implements AppealsService {
                 res.setCode(ResponseCode.FAILURE);
             }
 
+
+            TrabHelper.print(res);
+
             return res;
         } catch (Exception e) {
+            System.out.println("Failed to send request to GEPGXXXX");
             e.printStackTrace();
             res.setStatus(false);
             res.setDescription("Problem occurred Please Contact Support! ");
@@ -432,5 +446,67 @@ public class AppealsServiceImpl implements AppealsService {
         }
         return response;
     }
+
+    @Override
+    public Response registerForRetrial(Map<String, String> request) {
+        try {
+            // Retrieve appeal using provided parameters
+            Appeals appeal = appealsRepository.findByAppealNoAndTaxType(request.get("appealNo"), request.get("taxType"));
+
+            // Check if the appeal was found
+            if (appeal == null) {
+                return new Response(false, ResponseCode.FAILURE, "Appeal not found", null);
+            }
+
+            // Create a new decision history entry
+            DecisionHistory decisionHistory = createDecisionHistory(appeal, request.get("reason"));
+
+            // Update the appeal for retrial
+            updateAppealForRetrial(appeal, decisionHistory);
+
+            // Save the updated appeal
+            appealsRepository.save(appeal);
+
+            return new Response(true, ResponseCode.SUCCESS, "Successfully registered for retrial", null);
+
+        } catch (Exception e) {
+            // Log the exception for better traceability
+            e.printStackTrace();
+            return new Response(false, ResponseCode.FAILURE, "Failed to register for retrial: " + e.getMessage(), null);
+        }
+    }
+
+    private DecisionHistory createDecisionHistory(Appeals appeal, String reason) {
+        DecisionHistory decisionHistory = new DecisionHistory();
+        decisionHistory.setAppeals(appeal);
+        decisionHistory.setAppealStatusTrend(appeal.getStatusTrend());
+        decisionHistory.setJudgeName(appeal.getSummons().getJudge());
+        decisionHistory.setSummaryOfDecree(appeal.getSummaryOfDecree());
+        decisionHistory.setHearingDate(appeal.getSummons().getSummonStartDate() + " To " + appeal.getSummons().getSummonEndDate());
+        decisionHistory.setCreatedDate(new Date());
+        decisionHistory.setReason(reason);
+        decisionHistory.setDecidedDate(appeal.getDecidedDate());
+        decisionHistory.setCreatedBy(loggedUser.getInfo().getName());
+
+        // Save decision history and return it
+        return decisionHistoryRepository.save(decisionHistory);
+    }
+
+    private void updateAppealForRetrial(Appeals appeal, DecisionHistory decisionHistory) {
+        // Update appeal properties for retrial
+        appeal.setStatusTrend(appealStatusTrendRepository.findAppealStatusTrendByAppealStatusTrendName("NEW"));
+        appeal.setDecidedDate(null);
+        appeal.setConcludingDate(null);
+        appeal.setDateOfTheLastOrder(null);
+        appeal.setSummons(null);
+        appeal.setOutcomeOfDecision("NO DECISION");
+        appeal.setProcedingStatus(null);
+        appeal.setWonBy("");
+        appeal.setDecidedBy("");
+
+        // Add decision history to appeal
+        appeal.getDecisionHistories().add(decisionHistory);
+    }
+
 
 }

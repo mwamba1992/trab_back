@@ -23,6 +23,7 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import tz.go.mof.trab.controllers.SummonsController;
+import tz.go.mof.trab.dto.PaymentSummary;
 import tz.go.mof.trab.dto.bill.*;
 import tz.go.mof.trab.dto.payment.PaymentSearchDto;
 import tz.go.mof.trab.dto.payment.PaymentSummaryDto;
@@ -92,7 +93,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             SimpleDateFormat DateFor = new SimpleDateFormat("dd MMMM yyyy");
 
 
-            List<Payment> paymentList = new ArrayList<Payment>();
+            List<Payment> paymentList;
             paymentList = paymentService.searchPayments(paymentSearchDto);
             String details = "";
             String dateFrom = "";
@@ -160,13 +161,12 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
                 byte[] fileContent = JasperExportManager.exportReportToPdf(jasperPrint);
                 contentToSend = Base64.getEncoder().encodeToString(fileContent);
             } else {
-
                 logger.info("xls");
                 JRXlsxExporter exporter = new JRXlsxExporter();
                 exporter.setParameter(JRExporterParameter.JASPER_PRINT, jasperPrint);
-                exporter.setParameter(JRExporterParameter.OUTPUT_FILE_NAME, REPORT_DESIGN_PATH + "payment_summary.xlsx");
+                exporter.setParameter(JRExporterParameter.OUTPUT_FILE_NAME, REPORT_DESIGN_PATH + "cash_book_trab.xlsx");
                 exporter.exportReport();
-                File excellFile = new File(REPORT_DESIGN_PATH + "payment_summary.xlsx");
+                File excellFile = new File(REPORT_DESIGN_PATH + "cash_book_trab.xlsx");
                 byte[] fileContent = FileUtils.readFileToByteArray(excellFile);
                 contentToSend = Base64.getEncoder().encodeToString(fileContent);
             }
@@ -389,6 +389,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
         }
         return response;
     }
+
 
     @Override
     public Response<String> getBillSummaryAmount(String format, BillSummaryReportDto billSummaryReportDto) throws JRException, IOException {
@@ -824,13 +825,13 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             DateFormat outputFormat = new SimpleDateFormat("MMM d, yyyy");
 
 
-            excelFileCreator.createCell(row, columnCount++, appeal.getAppealNo(), style);
+            excelFileCreator.createCell(row, columnCount++, appeal.getAppealNo() , style);
             excelFileCreator.createCell(row, columnCount++, appeal.getTax().getTaxName().toUpperCase(), style);
             excelFileCreator.createCell(row, columnCount++,  tzsAmount, style);
             excelFileCreator.createCell(row, columnCount++,  usdAmount, style);
             excelFileCreator.createCell(row, columnCount++, appeal.getAppellantName(), style);
             excelFileCreator.createCell(row, columnCount++,  "COMM GENERAL", style);
-            excelFileCreator.createCell(row, columnCount++, outputFormat.format(appeal.getDateOfFilling()), style);
+            excelFileCreator.createCell(row, columnCount++,   appeal.getDateOfFilling() !=null? outputFormat.format(appeal.getDateOfFilling()): "", style);
             excelFileCreator.createCell(row, columnCount++, appeal.getNatureOfAppeal(), style);
             excelFileCreator.createCell(row, columnCount++,  appeal.getDecidedDate() !=null?outputFormat.format(appeal.getDecidedDate()):"", style);
             excelFileCreator.createCell(row, columnCount++, appeal.getStatusTrend().getAppealStatusTrendName(), style);

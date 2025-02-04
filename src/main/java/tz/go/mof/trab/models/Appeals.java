@@ -2,6 +2,7 @@ package tz.go.mof.trab.models;
 
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import javax.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -167,5 +168,12 @@ public class Appeals {
 
 	private String deletedInitiatedBy = "";
 
+	@ManyToOne
+	@JoinColumn(name = "trat_appeals", nullable = true)
+	private TratAppeal tratAppeal;
+
+	@JsonIgnore
+	@OneToMany(mappedBy = "appeals", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<DecisionHistory>  decisionHistories;
 
 }

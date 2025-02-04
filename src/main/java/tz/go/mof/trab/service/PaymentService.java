@@ -13,8 +13,8 @@ import java.util.List;
 public interface PaymentService {
 
     PageListResponse<Payment> findAll(int page, int size);
-    public List<Payment> searchPayments(PaymentSearchDto paymentSearchDto);
-    public List<PaymentSummaryDto> searchPaymentSummary(PaymentSearchDto paymentSearchDto);
+    List<Payment> searchPayments(PaymentSearchDto paymentSearchDto);
+    List<PaymentSummaryDto> searchPaymentSummary(PaymentSearchDto paymentSearchDto);
     PageListResponse<Payment> findAllUnreconciledTransactions(int page, int size);
 
 }

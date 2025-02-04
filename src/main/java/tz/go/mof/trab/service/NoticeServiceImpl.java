@@ -205,6 +205,11 @@ public class NoticeServiceImpl implements NoticeService {
             notice.setSystemUser(user);
             notice.setDes(req.get("des"));
 
+
+            if(req.get("additionalRespondent") !=null) {
+                notice.setAdditionalRespondent(req.get("additionalRespondent"));
+            }
+
             Adress adress = new Adress();
             adress.setAdressId(adressRepository.findLastUsedId() + 1);
             adress.setSlp(req.get("adress"));

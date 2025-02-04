@@ -8,6 +8,7 @@ import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -64,6 +65,10 @@ import tz.go.mof.trab.service.*;
  */
 @Component
 public class GlobalMethods {
+
+
+    @Autowired
+    private ExcelFileCreator excelFileCreator;
 
     private static final Logger billLogger = Logger.getLogger("trab.bill.request");
 
@@ -829,14 +834,14 @@ public class GlobalMethods {
                 if (!parameter.isEmpty()) {
                     parameter = parameter + joiner;
                 }
-                parameter = parameter + " d.decided_date is not null";
+                parameter = parameter + " d.decided_date is not null ";
             }
 
             if (criterial.get("hearing").equalsIgnoreCase("pending")) {
                 if (!parameter.isEmpty()) {
                     parameter = parameter + joiner;
                 }
-                parameter = parameter + " d.decided_date is null";
+                parameter = parameter + " d.decided_date is null ";
             }
 
 
@@ -844,7 +849,7 @@ public class GlobalMethods {
                 if (!parameter.isEmpty()) {
                     parameter = parameter + joiner;
                 }
-                parameter = parameter + " d.proceding_status = 'CONCLUDED'";
+                parameter = parameter + " d.proceding_status = 'CONCLUDED' AND decided_date is null ";
             }
 
 
@@ -853,7 +858,22 @@ public class GlobalMethods {
                 if (!parameter.isEmpty()) {
                     parameter = parameter + joiner;
                 }
-                parameter = parameter + " d.proceding_status is null  and summon_id is not null and  decided_date is null";
+                parameter = parameter + " d.proceding_status is null  and summon_id is not null and  decided_date is null ";
+            }
+
+            if (criterial.get("hearing").equalsIgnoreCase("All Pending")) {
+                if (!parameter.isEmpty()) {
+                    parameter = parameter + joiner;
+                }
+                parameter = parameter + " d.decided_date is null ";
+            }
+
+
+            if (criterial.get("hearing").equalsIgnoreCase("Pending For Assignment")) {
+                if (!parameter.isEmpty()) {
+                    parameter = parameter + joiner;
+                }
+                parameter = parameter + " d.status_trend = 'c140eb70a2de11ed96425f92e50c79ff' AND decided_date is null  AND summon_id is null";
             }
         }
 
@@ -861,7 +881,12 @@ public class GlobalMethods {
             if (!parameter.isEmpty()) {
                 parameter = parameter + joiner;
             }
-            parameter = parameter + " d.decided_by=:chairMan ";
+
+            if(criterial.get("hearing").equalsIgnoreCase("hearing")){
+                parameter = parameter + "s.judge =:chairMan ";
+            }else {
+                parameter = parameter + " d.decided_by=:chairMan ";
+            }
         }
 
         if ((!criterial.get("tax").isEmpty()) && (criterial.get("tax")) != null) {
@@ -908,12 +933,30 @@ public class GlobalMethods {
             parameter = parameter + " d.decided_date <=:to_decided_date ";
         }
 
+//        if ((!criterial.get("region").isEmpty()) && (criterial.get("region")) != null) {
+//            if (!parameter.isEmpty()) {
+//                parameter = parameter + joiner;
+//            }
+//            parameter = parameter + " d.appeal_no LIKE :region ";
+//        }
+
+
         if ((!criterial.get("region").isEmpty()) && (criterial.get("region")) != null) {
+            String[] regions = criterial.get("region").split(";");
+
+            StringBuilder likeConditions = new StringBuilder();
+            for (int i = 0; i < regions.length; i++) {
+                if (i > 0) {
+                    likeConditions.append(" OR ");
+                }
+                likeConditions.append(" d.appeal_no LIKE :region" + i);
+            }
             if (!parameter.isEmpty()) {
                 parameter = parameter + joiner;
             }
-            parameter = parameter + " d.appeal_no LIKE :region ";
+            parameter = parameter + " (" + likeConditions + ") ";
         }
+
 
         if ((!criterial.get("wonBy").isEmpty()) && (criterial.get("wonBy")) != null) {
             if (!parameter.isEmpty()) {
@@ -938,7 +981,11 @@ public class GlobalMethods {
 
             getQueryFromSelection(criterial, q);
             if ((!criterial.get("region").isEmpty()) && (criterial.get("region")) != null) {
-                q.setParameter("region", criterial.get("region"));
+
+                String[] regions = criterial.get("region").split(";");
+                for (int i = 0; i < regions.length; i++) {
+                    q.setParameter("region" + i, "%" + regions[i] + "%");
+                }
             }
 
             appeals = q.getResultList();
@@ -1671,4 +1718,65 @@ public class GlobalMethods {
         matcher = pattern.matcher(email);
         return matcher.matches();
     }
+
+
+    public Response<String> getApplications (List<ApplicationRegister> applicationRegisters) throws IOException {
+        excelFileCreator.newReportExcel();
+
+        Response response = new Response();
+
+
+        String[] headers = new String[]{"APPLICATION NO", "TAX TYPE", "APPLICANT", "RESPONDENT", "FILLING DATE", "DECISION DATE", "STATUS ", "DECIDED BY"};
+
+
+        excelFileCreator.writeTableHeaderExcel("Application Report", "Tax Revenue Appeals Board (TRAB) \n Applications \n"
+                , headers);
+
+
+        CellStyle style = excelFileCreator.getFontContentExcel();
+
+        // starting write on row
+        int startRow = 2;
+
+        for(ApplicationRegister applicationRegister: applicationRegisters){
+            Row row = excelFileCreator.sheet.createRow(startRow++);
+            int columnCount = 0;
+
+
+
+            DateFormat outputFormat = new SimpleDateFormat("MMM d, yyyy");
+
+
+            excelFileCreator.createCell(row, columnCount++,   applicationRegister.getApplicationNo(), style);
+            excelFileCreator.createCell(row, columnCount++,   applicationRegister.getTaxes().getTaxName(), style);
+            excelFileCreator.createCell(row, columnCount++,   applicationRegister.getApplicant().getFirstName().toUpperCase(), style);
+            excelFileCreator.createCell(row, columnCount++,  "COMMISSIONER GENERAL", style);
+            excelFileCreator.createCell(row, columnCount++,   outputFormat.format(applicationRegister.getDateOfFilling()), style);
+            excelFileCreator.createCell(row, columnCount++,  applicationRegister.getDateOfDecision() !=null?outputFormat.format(applicationRegister.getDateOfDecision()): "", style);
+            excelFileCreator.createCell(row, columnCount++,  applicationRegister.getStatusTrend().getApplicationStatusTrendName(), style);
+            excelFileCreator.createCell(row, columnCount++,   applicationRegister.getSummons() !=null?applicationRegister.getSummons().getJud().getName():
+                    applicationRegister.getDecideBy(), style);
+
+        }
+
+
+        // Convert the workbook to a byte array
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        excelFileCreator.workbook.write(byteArrayOutputStream);
+        byte[] workbookBytes = byteArrayOutputStream.toByteArray();
+
+        // Close the workbook
+        excelFileCreator.workbook.close();
+
+        // Convert byte array to base64 string
+        String base64String = java.util.Base64.getEncoder().encodeToString(workbookBytes);
+
+
+        response.setDescription("Success");
+        response.setData(base64String);
+        response.setCode(ResponseCode.SUCCESS);
+        return response;
+
+    }
+
 }

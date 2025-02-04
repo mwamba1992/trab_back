@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import tz.go.mof.trab.dto.NoticeListAppeal;
+import tz.go.mof.trab.models.Appeals;
 import tz.go.mof.trab.models.Notice;
 
 import java.util.Date;
@@ -33,6 +35,13 @@ public interface NoticeRepository extends PagingAndSortingRepository<Notice, Lon
 
 	@Query(value = "select n from Notice n where n.billId.billId =:billId")
 	Notice findNoticeByBill(String billId);
+
+	@Query(value = "SELECT * FROM trat_bkp.notice_list_appeal", nativeQuery = true)
+	List<Object[]> findAllTratAppeals();
+
+
+	@Query(value = "SELECT * FROM  trat_bkp.appeals where notice_id =:noticeId", nativeQuery = true)
+	List<Object[]> findTratAppealByNoticeId(Long noticeId);
 
 
 }

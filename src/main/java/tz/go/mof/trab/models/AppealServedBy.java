@@ -35,5 +35,9 @@ public class AppealServedBy extends BaseEntity{
     private String resoPhone;
     private Date resoDate;
 
+    private String respondentFile;
+
+    private String appellantFile;
+
 
 }

@@ -475,7 +475,12 @@ public class ApplicationController {
             app.setDesicionSummary(req.get("remarks").getBytes());
             app.setRemarks((String) req.get("remarks"));
             app.setStatusTrend(statusRepo.findApplicationStatusTrendByApplicationStatusTrendName(req.get("statusTrend")));
-            app.setDateOfDecision(new SimpleDateFormat("YYYY-MM-DD").parse(req.get("date").split("T")[0]));
+
+
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+
+
+            app.setDateOfDecision(formatter.parse(req.get("date").split("T")[0]));
             app.setFilePath(req.get("fileName"));
             app.setAction("2");
             app.setCreatedBy(loggedUser.getInfo().getName());

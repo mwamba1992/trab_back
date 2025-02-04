@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import tz.go.mof.trab.dto.PaymentSummary;
 import tz.go.mof.trab.dto.bill.PageListResponse;
 import tz.go.mof.trab.dto.payment.PaymentSearchDto;
 import tz.go.mof.trab.dto.payment.PaymentSummaryDto;
@@ -124,8 +125,8 @@ public class PaymentServiceImpl implements  PaymentService {
                 parameter = parameter + joiner;
             }
 
-            if(paymentSearchDto.equals("XXXX")){
-                 parameter = parameter + "b.app_type is null";
+            if(paymentSearchDto.getType().equals("XXXX")){
+                 parameter = parameter + " b.app_type is null";
             }else{
                 parameter = parameter + " b.app_type =:app_type ";
             }
@@ -200,6 +201,7 @@ public class PaymentServiceImpl implements  PaymentService {
         return paymentList;
 
     }
+
 
     @Override
     public List<PaymentSummaryDto> searchPaymentSummary(PaymentSearchDto paymentSearchDto) {

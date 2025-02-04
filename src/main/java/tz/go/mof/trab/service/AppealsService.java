@@ -13,4 +13,7 @@ public interface AppealsService {
 
     Response uploadAppealManually(Map<String, String> request);
 
+
+    Response registerForRetrial(Map<String, String> request);
+
 }

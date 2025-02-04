@@ -8,6 +8,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,7 +68,7 @@ public class AppealController {
     private DeletedAppealRepository deletedAppealRepository;
 
     @Autowired
-    void setDeletedAppealRepository(DeletedAppealRepository deletedAppealRepository){
+    void setDeletedAppealRepository(DeletedAppealRepository deletedAppealRepository) {
         this.deletedAppealRepository = deletedAppealRepository;
     }
 
@@ -83,7 +84,6 @@ public class AppealController {
 
     @Autowired
     private SummonsAppealsRepository summonsAppealsRepository;
-
 
 
     @Autowired
@@ -144,7 +144,7 @@ public class AppealController {
 
             String dates[] = req.get("date").split("T");
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-            Date  dateOfFilling  = formatter.parse(dates[0]);
+            Date dateOfFilling = formatter.parse(dates[0]);
 
 
             app.setAssNo(req.get("assNo"));
@@ -166,6 +166,9 @@ public class AppealController {
 
             AppealAmountSet = saveAmount(AppealAmountSet, amountList);
             app.setAppealAmount(AppealAmountSet);
+
+
+            app.setAppealNo(req.get("region") + "." + app.getAppealNo().split("\\.")[1]);
             res.setStatus(true);
             res.setDescription("Success");
             res.setCode(ResponseCode.SUCCESS);
@@ -553,11 +556,14 @@ public class AppealController {
     @ResponseBody
     public Response<AppealServedBy> updateServedBy(@RequestBody Map<String, String> req) throws IllegalStateException {
 
+
+        TrabHelper.print(req);
+
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
         Response<AppealServedBy> appealsResponse = new Response<>();
         try {
 
-            Appeals appeals = appealsRepository.findByappealNo(req.get("appNo"));
+            Appeals appeals = appealsRepository.findAppealsByAppealNoAndTax_Id(req.get("appNo"), req.get("tax")).get(0);
             AppealServedBy appealServedBy = new AppealServedBy();
             appealServedBy.setAppName(req.get("appName"));
             appealServedBy.setAppPhone(req.get("appPhone"));
@@ -566,6 +572,58 @@ public class AppealController {
             appealServedBy.setResoName(req.get("resoName"));
             appealServedBy.setResoPhone(req.get("resoPhone"));
             appealServedBy.setResoDate(formatter.parse(req.get("resoDate").split("T")[0]));
+
+
+            String filePath = "";
+            String binaryData = "";
+            if (req.get("file1") != null) {
+                appealServedBy.setAppellantFile(req.get("fileName1"));
+                //check if LocationSketch available then upload
+                binaryData = req.get("file1");
+                filePath = req.get("fileName1");
+
+
+                if (!new File(uploadingDir).exists()) {
+                    boolean success = new File(uploadingDir).mkdirs();
+                    if (!success) {
+                    }
+                }
+
+                File fileToCreate = new File(uploadingDir, filePath);
+
+
+                if (!fileToCreate.exists()) {
+                    byte[] decodedBytes = Base64.getDecoder().decode(binaryData);
+                    FileUtils.writeByteArrayToFile(fileToCreate, decodedBytes);
+                }
+
+            }
+
+
+            String filePath2 = "";
+            String binaryData2 = "";
+            if (req.get("file2") != null) {
+                appealServedBy.setRespondentFile(req.get("fileName2"));
+                //check if LocationSketch available then upload
+                binaryData2 = req.get("file2");
+                filePath2 = req.get("fileName2");
+
+
+                if (!new File(uploadingDir).exists()) {
+                    boolean success = new File(uploadingDir).mkdirs();
+                    if (!success) {
+                    }
+                }
+
+                File fileToCreate = new File(uploadingDir, filePath2);
+
+                if (!fileToCreate.exists()) {
+                    byte[] decodedBytes = Base64.getDecoder().decode(binaryData2);
+                    FileUtils.writeByteArrayToFile(fileToCreate, decodedBytes);
+                }
+
+            }
+
 
             AppealServedBy newAppealServedBy = appealServedByRepository.save(appealServedBy);
 
@@ -577,6 +635,7 @@ public class AppealController {
             appealsResponse.setStatus(true);
 
         } catch (Exception e) {
+            e.printStackTrace();
             appealsResponse.setCode(ResponseCode.FAILURE);
             appealsResponse.setStatus(false);
             appealsResponse.setData(null);
@@ -673,8 +732,6 @@ public class AppealController {
             lastOrderDate = formatter.parse(lastOrderDates[0]);
 
 
-
-
             if (endDate.before(startDate)) {
                 res.setDescription("Dates mismatch!!!");
                 res.setStatus(false);
@@ -760,11 +817,10 @@ public class AppealController {
     }
 
 
-
     @GetMapping(value = "/mark-delete-appeal/{id}", produces = "application/json")
     @ResponseBody
-    public Response  markForDelete(@PathVariable("id") Long id){
-        Response response  = new Response();
+    public Response markForDelete(@PathVariable("id") Long id) {
+        Response response = new Response();
 
         try {
 
@@ -783,23 +839,60 @@ public class AppealController {
             response.setCode(ResponseCode.SUCCESS);
             response.setStatus(true);
             response.setDescription("Appeal No " + appeal.getAppealNo() + " " +
-                    appeal.getTax().getTaxName()+ " " + appeal.getAppellantName() + "  " +
+                    appeal.getTax().getTaxName() + " " + appeal.getAppellantName() + "  " +
                     "Create a delete request !!!!");
 
             return response;
 
-        }catch (Exception  e){
-             e.printStackTrace();
-             response.setCode(ResponseCode.FAILURE);
-             response.setStatus(false);
-             response.setDescription("System issue you can perform this now");
-             return response;
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setCode(ResponseCode.FAILURE);
+            response.setStatus(false);
+            response.setDescription("System issue you can perform this now");
+            return response;
+        }
+    }
+
+
+    @GetMapping(value = "/unmark-delete-appeal/{id}", produces = "application/json")
+    @ResponseBody
+    public Response  removeFromMarkDelete(@PathVariable("id") Long id) {
+        Response response = new Response();
+
+        try {
+
+            Appeals appeal = appealsRepository.findById(id).get();
+
+            if (appeal == null) {
+                response.setCode(ResponseCode.FAILURE);
+                response.setStatus(false);
+                response.setDescription("Appeal Doesnt exist");
+            }
+
+            appeal.setInitiatedForDelete(false);
+            appeal.setDeletedInitiatedBy("");
+            appealsRepository.save(appeal);
+
+            response.setCode(ResponseCode.SUCCESS);
+            response.setStatus(true);
+            response.setDescription("Appeal No " + appeal.getAppealNo() + " " +
+                    appeal.getTax().getTaxName() + " " + appeal.getAppellantName() + "  " +
+                    "Remove delete request !!!!");
+
+            return response;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setCode(ResponseCode.FAILURE);
+            response.setStatus(false);
+            response.setDescription("System issue you can perform this now");
+            return response;
         }
     }
 
     @GetMapping(value = "/delete-appeal/{id}", produces = "application/json")
     @ResponseBody
-    public Response  deleteAppeal(@PathVariable("id") Long id){
+    public Response deleteAppeal(@PathVariable("id") Long id) {
 
         Response response = new Response();
 
@@ -814,7 +907,7 @@ public class AppealController {
 
             List<AppealAmount> appealAmounts = appealAmountRepository.findAppealAmountByAppealId(id);
 
-            for (AppealAmount appealAmount: appealAmounts){
+            for (AppealAmount appealAmount : appealAmounts) {
                 appealAmountRepository.delete(appealAmount);
             }
 
@@ -822,7 +915,7 @@ public class AppealController {
             response.setStatus(true);
             response.setCode(ResponseCode.SUCCESS);
             response.setDescription("Appeal No " + appeal.getAppealNo() + " " +
-                    appeal.getTax().getTaxName()+ " " + appeal.getAppellantName() + "  " +
+                    appeal.getTax().getTaxName() + " " + appeal.getAppellantName() + "  " +
                     "Deleted and backUp successful");
 
             DeletedAppeals deletedAppeals = new DeletedAppeals();
@@ -831,13 +924,22 @@ public class AppealController {
 
 
             return response;
-        }catch (Exception  e){
-             e.printStackTrace();
-             response.setCode(ResponseCode.FAILURE);
-             response.setStatus(false);
-             response.setDescription("Sytem issue you can pefom this now");
-             return response;
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setCode(ResponseCode.FAILURE);
+            response.setStatus(false);
+            response.setDescription("Sytem issue you can pefom this now");
+            return response;
         }
     }
+
+
+    @PostMapping(path = "/register-for-retrial", produces = "application/json")
+    @ResponseBody
+    public Response registerForRetrial(@RequestBody Map<String, String> req) {
+        return appealService.registerForRetrial(req);
+    }
+
+
 }
 

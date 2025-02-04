@@ -206,4 +206,12 @@ public class SummonsController {
 
     }
 
+
+    @GetMapping(path = "/change-judge/{summonId}/{judgeId}")
+    @ResponseBody
+    public Response changeJudge(@PathVariable Long summonId, @PathVariable String judgeId) {
+        System.out.println("summonId: " + summonId + " judgeId: " + judgeId);
+        return summonsService.changeJudge(summonId, judgeId);
+    }
+
 }

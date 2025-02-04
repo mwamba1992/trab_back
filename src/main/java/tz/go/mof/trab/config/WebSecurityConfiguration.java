@@ -84,6 +84,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
         web
                 .ignoring()
                 .antMatchers(
+                        "/appeal/**",
                         "/applicant/**",
                         "/api/oauth/token/revoke/**",
                         "/api/oauth/",
@@ -94,6 +95,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
                         "/appeals",
                         "/api/notices-dates",
                         "/appeals/**",
+                        "/applicationregister/**",
                         "/appeal/find-by-appeal-no",
                         "/v3/api-docs/**",
                         "/api/receive-bill",

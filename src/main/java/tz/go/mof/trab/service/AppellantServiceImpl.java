@@ -161,7 +161,7 @@ public class AppellantServiceImpl implements AppellantService {
 
         // 2. Search by exact name match
         if (name != null && !name.trim().isEmpty()) {
-            Appellant byName = appealantRepository.findByFirstNameIgnoreCase(name.trim());
+            Appellant byName = appealantRepository.findFirstByFirstNameIgnoreCase(name.trim());
             if (byName != null) {
                 return byName;
             }

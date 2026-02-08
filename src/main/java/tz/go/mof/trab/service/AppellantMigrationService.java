@@ -128,13 +128,13 @@ public class AppellantMigrationService {
             // Check by name if not found by TIN — try multiple match strategies
             if (!exists) {
                 // Try exact match on normalized name
-                Appellant byName = appealantRepository.findByFirstNameIgnoreCase(normalizedName);
+                Appellant byName = appealantRepository.findFirstByFirstNameIgnoreCase(normalizedName);
                 if (byName != null) {
                     exists = true;
                 }
                 // Try original name
                 if (!exists) {
-                    byName = appealantRepository.findByFirstNameIgnoreCase(originalName);
+                    byName = appealantRepository.findFirstByFirstNameIgnoreCase(originalName);
                     if (byName != null) {
                         exists = true;
                     }

@@ -20,5 +20,5 @@ public interface AppealantRepository  extends CrudRepository<Appellant, Long>{
 
     List<Appellant> findByFirstNameContainingIgnoreCase(String name);
 
-    Appellant findByFirstNameIgnoreCase(String firstName);
+    Appellant findFirstByFirstNameIgnoreCase(String firstName);
 }

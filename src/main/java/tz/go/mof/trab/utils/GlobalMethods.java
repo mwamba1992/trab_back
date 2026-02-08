@@ -110,6 +110,10 @@ public class GlobalMethods {
     @Lazy
     private BillService billService;
 
+    @Autowired
+    @Lazy
+    private AppellantService appellantService;
+
     private final BillItemService billItemService;
     private final FinancialYearService financialYearService;
     private final SummonsRepository summonRepository;
@@ -1679,15 +1683,15 @@ public class GlobalMethods {
      * @return void
      * @desc This method to save appealant from notice
      */
-    public void saveAppellant(@RequestBody Map<String, String> req, Notice notice) {
-//        Appellant appealant = notice.getAppealantId();
-//        appealant.setNatureOfBusiness(req.get("natOf"));
-//        appealant.setEmail(req.get("email"));
-//        appealant.setPhoneNumber(req.get("phone"));
-//        appealant.setTinNumber(req.get("tinNumber"));
-//
-//
-//        appealantRepository.save(appealant);
+    public Appellant saveAppellant(@RequestBody Map<String, String> req, Notice notice) {
+        String name = notice.getAppelantName() != null ? notice.getAppelantName() : req.get("appellantName");
+        return appellantService.findOrCreateByTin(
+                req.get("tinNumber"),
+                name,
+                req.get("email"),
+                req.get("phone"),
+                req.get("natOf")
+        );
     }
 
 

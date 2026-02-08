@@ -140,7 +140,8 @@ public class AppealController {
             Notice notice = noticeRepository.findBynoticeNo(app.getNoticeNumber());
 
 
-            globalMethods.saveAppellant(req, notice);
+            Appellant appellant = globalMethods.saveAppellant(req, notice);
+            app.setAppellant(appellant);
 
             String dates[] = req.get("date").split("T");
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");

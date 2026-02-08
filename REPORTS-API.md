@@ -1,23 +1,19 @@
-# TRAB Reports API Documentation
+# Reports API
 
-## Base Info
-
-- **Base Path:** `/api/reports`
-- **Method:** `POST` (all endpoints)
-- **Content-Type:** `application/json`
-- **Auth:** OAuth2 Bearer Token required
+**Base Path:** `/api/reports`
+**Method:** `POST` (all endpoints)
+**Content-Type:** `application/json`
+**Auth:** OAuth2 Bearer Token required
 
 ---
 
 ## Response Format
 
-All endpoints return the same structure:
-
 ```json
 {
   "status": true,
-  "code": 200,
-  "description": "Report generated successfully",
+  "code": 6000,
+  "description": "Success",
   "data": {
     "content": "<base64-encoded-string>",
     "contentType": "application/pdf",
@@ -56,7 +52,7 @@ link.click();
 
 ## Request Body (ReportFilterDto)
 
-All endpoints accept the same request body. **All fields are optional.**
+All endpoints accept the same body. **All fields are optional.**
 
 ```json
 {
@@ -82,7 +78,7 @@ All endpoints accept the same request body. **All fields are optional.**
 | `dateOfDecisionTo` | string | `null` | Decision date end (`yyyy-MM-dd`) |
 | `region` | string | `null` | Region name (filters by appeal number) |
 | `wonBy` | string | `null` | Case won by party |
-| `chairPerson` | string | `null` | Chair person (Judge ID) |
+| `chairPerson` | string | `null` | Chair person / Judge name |
 | `hearingStage` | string | `null` | Hearing/proceeding stage |
 
 > When `dateFrom` and `dateTo` are both omitted, reports return **all records**.
@@ -95,21 +91,9 @@ All endpoints accept the same request body. **All fields are optional.**
 ```
 POST /api/reports/appeals
 ```
-Appeal register with filing dates, tax types, amounts, and status.
+Appeal register with filing dates, tax types, amounts, decided by, and status.
 
 **Relevant filters:** `dateFrom`, `dateTo`, `taxType`, `statusTrend`, `dateOfDecisionFrom`, `dateOfDecisionTo`, `region`, `wonBy`, `chairPerson`, `hearingStage`
-
-**Example:**
-```json
-{
-  "dateFrom": "2024-01-01",
-  "dateTo": "2024-12-31",
-  "taxType": "Income Tax",
-  "statusTrend": "PENDING",
-  "region": "Dar es Salaam",
-  "format": "pdf"
-}
-```
 
 ---
 
@@ -117,18 +101,9 @@ Appeal register with filing dates, tax types, amounts, and status.
 ```
 POST /api/reports/appeals-by-region
 ```
-Same as Appeals Report but **grouped by region** (e.g., Dar es Salaam, Arusha, Mwanza). Each region section has its own list and subtotals. Region is derived from appeal number prefix (e.g., `DSM.5/2024` = Dar es Salaam).
+Same as Appeals Report but **grouped by region** with subtotals per region.
 
-**Relevant filters:** `dateFrom`, `dateTo`, `taxType`, `statusTrend`, `dateOfDecisionFrom`, `dateOfDecisionTo`, `region`, `wonBy`, `chairPerson`, `hearingStage`
-
-**Example:**
-```json
-{
-  "dateFrom": "2024-01-01",
-  "dateTo": "2024-12-31",
-  "format": "pdf"
-}
-```
+**Relevant filters:** Same as Appeals Report
 
 ---
 
@@ -139,11 +114,6 @@ POST /api/reports/judge-workload
 Cases per judge with decided/pending breakdown.
 
 **Relevant filters:** `dateFrom`, `dateTo`
-
-**Example:**
-```json
-{ "dateFrom": "2024-01-01", "dateTo": "2024-12-31", "format": "pdf" }
-```
 
 ---
 
@@ -174,11 +144,6 @@ POST /api/reports/overdue-cases
 Cases exceeding the minimum open days threshold.
 
 **Relevant filters:** `dateFrom`, `dateTo`, `minDaysOpen` (default: 90)
-
-**Example:**
-```json
-{ "dateFrom": "2024-01-01", "dateTo": "2024-12-31", "minDaysOpen": 180, "format": "pdf" }
-```
 
 ---
 
@@ -216,7 +181,7 @@ Revenue collection rates by category (billed vs collected).
 ```
 POST /api/reports/bill-reconciliation
 ```
-Bill-to-payment matching with variance and status (Paid/Unpaid/Expired).
+Bill-to-payment matching with variance and status.
 
 **Relevant filters:** `dateFrom`, `dateTo`
 
@@ -256,12 +221,7 @@ Applications with applicant, respondent, tax type, and status.
 ```
 POST /api/reports/financial-year-comparison
 ```
-Year-over-year comparison of appeals and applications. **No date filter needed** — returns all financial years.
-
-**Example:**
-```json
-{ "format": "pdf" }
-```
+Year-over-year comparison. No date filter needed.
 
 ---
 
@@ -269,7 +229,7 @@ Year-over-year comparison of appeals and applications. **No date filter needed**
 ```
 POST /api/reports/top-appellants
 ```
-Most frequent appellants ranked by case count.
+Most frequent appellants ranked by case count. Groups by Appellant ID (FK) for accurate deduplication.
 
 **Relevant filters:** `dateFrom`, `dateTo`
 
@@ -277,31 +237,20 @@ Most frequent appellants ranked by case count.
 
 ## Quick Reference
 
-| # | Endpoint | Description | Layout |
-|---|----------|-------------|--------|
-| 1 | `/appeals` | Appeal register | Landscape |
-| 2 | `/appeals-by-region` | Appeals grouped by region | Landscape |
-| 3 | `/judge-workload` | Judge case distribution | Landscape |
-| 4 | `/case-status-summary` | Status aggregation | Portrait |
-| 5 | `/tax-type-analysis` | Tax type breakdown | Landscape |
-| 6 | `/overdue-cases` | Overdue/aging cases | Landscape |
-| 7 | `/payments` | Payment transactions | Landscape |
-| 8 | `/outstanding-bills` | Unpaid bills + aging | Landscape |
-| 9 | `/revenue-summary` | Collection rates | Portrait |
-| 10 | `/bill-reconciliation` | Bill vs payment match | Landscape |
-| 11 | `/notices` | Notice register | Landscape |
-| 12 | `/summons` | Hearing summons | Landscape |
-| 13 | `/applications` | Application register | Landscape |
-| 14 | `/financial-year-comparison` | FY comparison | Portrait |
-| 15 | `/top-appellants` | Top appellants ranked | Landscape |
-
-## Error Response
-
-```json
-{
-  "status": false,
-  "code": 500,
-  "description": "Error generating report: <error message>",
-  "data": null
-}
-```
+| # | Endpoint | Description |
+|---|----------|-------------|
+| 1 | `/appeals` | Appeal register |
+| 2 | `/appeals-by-region` | Appeals grouped by region |
+| 3 | `/judge-workload` | Judge case distribution |
+| 4 | `/case-status-summary` | Status aggregation |
+| 5 | `/tax-type-analysis` | Tax type breakdown |
+| 6 | `/overdue-cases` | Overdue/aging cases |
+| 7 | `/payments` | Payment transactions |
+| 8 | `/outstanding-bills` | Unpaid bills + aging |
+| 9 | `/revenue-summary` | Collection rates |
+| 10 | `/bill-reconciliation` | Bill vs payment match |
+| 11 | `/notices` | Notice register |
+| 12 | `/summons` | Hearing summons |
+| 13 | `/applications` | Application register |
+| 14 | `/financial-year-comparison` | FY comparison |
+| 15 | `/top-appellants` | Top appellants ranked |

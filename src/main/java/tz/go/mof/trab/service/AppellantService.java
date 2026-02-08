@@ -20,4 +20,6 @@ public interface AppellantService {
     Response<Appellant> deleteAppellant(String appellantId);
 
     Response<Appellant> changeAppellantStatus(String appellantId, boolean status);
+
+    Appellant findOrCreateByTin(String tinNumber, String name, String email, String phone, String natOfBus);
 }

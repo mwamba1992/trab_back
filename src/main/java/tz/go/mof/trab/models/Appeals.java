@@ -168,6 +168,10 @@ public class Appeals {
 
 	private String deletedInitiatedBy = "";
 
+	@ManyToOne(optional = true)
+	@JoinColumn(name = "appealant_id", nullable = true)
+	private Appellant appellant;
+
 	@ManyToOne
 	@JoinColumn(name = "trat_appeals", nullable = true)
 	private TratAppeal tratAppeal;

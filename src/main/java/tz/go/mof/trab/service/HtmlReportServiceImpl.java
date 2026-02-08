@@ -570,7 +570,11 @@ public class HtmlReportServiceImpl implements HtmlReportService {
 
                 OverdueCaseDto dto = new OverdueCaseDto();
                 dto.setAppealNo(a.getAppealNo());
-                dto.setAppellant(a.getAppellantName() != null ? a.getAppellantName() : "-");
+                // Prefer FK-linked name, fall back to string
+            String appellantName = a.getAppellant() != null && a.getAppellant().getFirstName() != null
+                    ? a.getAppellant().getFirstName()
+                    : (a.getAppellantName() != null ? a.getAppellantName() : "-");
+            dto.setAppellant(appellantName);
                 dto.setRespondent("COMM GENERAL");
                 dto.setTaxType(a.getTax() != null ? a.getTax().getTaxName().toUpperCase() : "-");
                 dto.setFilingDate(a.getDateOfFilling());
@@ -730,7 +734,11 @@ public class HtmlReportServiceImpl implements HtmlReportService {
             EnhancedAppealReportDto dto = new EnhancedAppealReportDto();
             dto.setSerialNumber(sn);
             dto.setAppealNo(a.getAppealNo());
-            dto.setAppellant(a.getAppellantName() != null ? a.getAppellantName() : "-");
+            // Prefer FK-linked name, fall back to string
+            String appellantName = a.getAppellant() != null && a.getAppellant().getFirstName() != null
+                    ? a.getAppellant().getFirstName()
+                    : (a.getAppellantName() != null ? a.getAppellantName() : "-");
+            dto.setAppellant(appellantName);
             dto.setRespondent("COMM GENERAL");
             dto.setTaxType(a.getTax() != null ? a.getTax().getTaxName().toUpperCase() : "-");
             dto.setFilingDate(a.getDateOfFilling());
@@ -1944,16 +1952,33 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 return buildNoRecordResponse();
             }
 
-            // Group by appellant name
-            Map<String, List<Appeals>> byAppellant = appeals.stream()
-                    .filter(a -> a.getAppellantName() != null && !a.getAppellantName().isEmpty())
-                    .collect(Collectors.groupingBy(a -> a.getAppellantName().toUpperCase()));
+            // Group by appellant: prefer FK ID for accurate dedup, fall back to name string
+            Map<String, List<Appeals>> byAppellant = new LinkedHashMap<>();
+            Map<String, String> keyToDisplayName = new HashMap<>();
+
+            for (Appeals a : appeals) {
+                String groupKey;
+                String displayName;
+                if (a.getAppellant() != null && a.getAppellant().getAppellantId() != null) {
+                    groupKey = "ID:" + a.getAppellant().getAppellantId();
+                    displayName = a.getAppellant().getFirstName() != null
+                            ? a.getAppellant().getFirstName().toUpperCase()
+                            : (a.getAppellantName() != null ? a.getAppellantName().toUpperCase() : "UNKNOWN");
+                } else if (a.getAppellantName() != null && !a.getAppellantName().isEmpty()) {
+                    groupKey = "NAME:" + a.getAppellantName().toUpperCase();
+                    displayName = a.getAppellantName().toUpperCase();
+                } else {
+                    continue;
+                }
+                byAppellant.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(a);
+                keyToDisplayName.putIfAbsent(groupKey, displayName);
+            }
 
             List<TopAppellantDto> dtos = new ArrayList<>();
 
             for (Map.Entry<String, List<Appeals>> entry : byAppellant.entrySet()) {
                 TopAppellantDto dto = new TopAppellantDto();
-                dto.setAppellantName(entry.getKey());
+                dto.setAppellantName(keyToDisplayName.get(entry.getKey()));
 
                 List<Appeals> appellantAppeals = entry.getValue();
                 dto.setTotalCases(appellantAppeals.size());

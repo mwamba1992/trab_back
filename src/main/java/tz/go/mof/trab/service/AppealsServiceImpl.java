@@ -68,6 +68,9 @@ public class AppealsServiceImpl implements AppealsService {
     @Autowired
     private DecisionHistoryRepository decisionHistoryRepository;
 
+    @Autowired
+    private AppellantService appellantService;
+
 
     AppealsServiceImpl(AppealStatusTrendRepository appealStatusTrendRepository,
                        GfsService gfsService, TaxTypeService taxTypeService, AppealsAmountRepository appealsAmountRepository,
@@ -170,7 +173,8 @@ public class AppealsServiceImpl implements AppealsService {
                 app.setCreatedBy("neema.mwandu");
 
 
-                globalMethods.saveAppellant(request, notice);
+                Appellant appellant = globalMethods.saveAppellant(request, notice);
+                app.setAppellant(appellant);
 
 
                 Witness witness;
@@ -414,6 +418,16 @@ public class AppealsServiceImpl implements AppealsService {
 
             appeals.setAppealNo(appealNo);
             appeals.setAppellantName(request.get("appellantName"));
+
+            // Link to Appellant entity
+            Appellant manualAppellant = appellantService.findOrCreateByTin(
+                    request.get("tin"),
+                    request.get("appellantName"),
+                    null,
+                    request.get("phone"),
+                    null
+            );
+            appeals.setAppellant(manualAppellant);
 
             appeals.setDateOfFilling(simpleDateFormat.parse(request.get("dateFilling").split("T")[0]));
 

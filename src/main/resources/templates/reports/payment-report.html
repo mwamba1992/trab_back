@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 15mm;
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10px;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .report-header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .report-header img {
+            width: 70px;
+            height: auto;
+            margin-bottom: 6px;
+        }
+        .report-header h1 {
+            font-size: 16px;
+            margin: 0;
+            color: #1a1a2e;
+            text-transform: uppercase;
+        }
+        .report-header h2 {
+            font-size: 13px;
+            margin: 4px 0;
+            color: #333;
+        }
+        .report-header .subtitle {
+            font-size: 10px;
+            color: #666;
+        }
+        .gold-rule {
+            height: 3px;
+            background-color: #c8a415;
+            border: none;
+            margin: 8px 0 12px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        thead th {
+            background-color: #1a1a2e;
+            color: #ffffff;
+            font-size: 8px;
+            font-weight: bold;
+            padding: 5px 3px;
+            text-align: left;
+            text-transform: uppercase;
+            border: 1px solid #1a1a2e;
+        }
+        tbody td {
+            padding: 4px 3px;
+            font-size: 8px;
+            border: 1px solid #ddd;
+            vertical-align: top;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f8f8f8;
+        }
+        tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+        .amount-cell {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+        .number-cell {
+            text-align: center;
+        }
+        .group-header td {
+            font-weight: bold;
+            background-color: #e8e8e8;
+            border-top: 2px solid #c8a415;
+            font-size: 9px;
+        }
+        .subtotal-row td {
+            font-weight: bold;
+            background-color: #f0f0f0;
+            border-top: 1px solid #c8a415;
+            font-style: italic;
+        }
+        .total-row td {
+            font-weight: bold;
+            background-color: #e8e8e8;
+            border-top: 2px solid #c8a415;
+        }
+        .summary-box {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        .summary-box h3 {
+            font-size: 11px;
+            margin: 0 0 4px 0;
+        }
+        .summary-box p {
+            font-size: 10px;
+            margin: 2px 0;
+        }
+        .report-footer {
+            margin-top: 14px;
+            font-size: 8px;
+            color: #999;
+            text-align: center;
+            border-top: 1px solid #ddd;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-header">
+        <img th:src="${logoBase64}" alt="Coat of Arms" style="width:70px;height:auto;margin-bottom:6px;"/>
+        <h1>The United Republic of Tanzania</h1>
+        <h2>Tax Revenue Appeals Board (TRAB)</h2>
+        <hr class="gold-rule"/>
+        <h2>Payment Report</h2>
+        <p class="subtitle" th:text="${dateRange}">Date Range</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="number-cell">S/N</th>
+                <th>Control Number</th>
+                <th>Receipt No</th>
+                <th>Payer Name</th>
+                <th>Payment Date</th>
+                <th>PSP Name</th>
+                <th class="amount-cell">Paid Amount</th>
+                <th>App Type</th>
+            </tr>
+        </thead>
+        <tbody th:each="group : ${paymentGroups}">
+            <tr class="group-header">
+                <td colspan="8" th:text="${group.key}">Group Name</td>
+            </tr>
+            <tr th:each="payment, iterStat : ${group.value}">
+                <td class="number-cell" th:text="${payment.serialNumber}">1</td>
+                <td th:text="${payment.controlNumber}">-</td>
+                <td th:text="${payment.pspReceiptNumber}">-</td>
+                <td th:text="${payment.payerName}">-</td>
+                <td th:text="${payment.paymentDate != null} ? ${#dates.format(payment.paymentDate, 'dd/MM/yyyy')} : '-'">-</td>
+                <td th:text="${payment.pspName}">-</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(payment.paidAmount, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td th:text="${payment.appType}">-</td>
+            </tr>
+            <tr class="subtotal-row">
+                <td colspan="6" style="text-align:right;" th:text="'Subtotal (' + ${group.key} + ')'">Subtotal</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(groupSubtotals[group.key], 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td></td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="6" style="text-align:right;">GRAND TOTAL</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(grandTotal, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="summary-box">
+        <h3>Summary</h3>
+        <p>Total Payments: <strong th:text="${totalPayments}">0</strong></p>
+        <p>Total Amount: <strong th:text="${#numbers.formatDecimal(grandTotal, 1, 'COMMA', 2, 'POINT')}">0.00</strong></p>
+        <p>Payment Groups: <strong th:text="${totalGroups}">0</strong></p>
+    </div>
+
+    <div class="report-footer">
+        <p>Generated on <span th:text="${generatedDate}">date</span> | Tax Revenue Appeals Board (TRAB) - Official Report</p>
+    </div>
+</body>
+</html>

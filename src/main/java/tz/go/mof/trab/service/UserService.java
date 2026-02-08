@@ -22,7 +22,7 @@ public interface UserService {
 	
 	public Response<SystemUser> deleteUser(String userId);
 	
-	public ListResponse<SystemUser> getAllUsers();
+	public ListResponse<tz.go.mof.trab.dto.user.UserResponseDto> getAllUsers();
 
 	public ListResponse<SystemUser> getAllDisabled();
 

@@ -192,30 +192,55 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public ListResponse<SystemUser> getAllUsers() {
+	public ListResponse<tz.go.mof.trab.dto.user.UserResponseDto> getAllUsers() {
 
+		ListResponse<tz.go.mof.trab.dto.user.UserResponseDto> userListResponse = new ListResponse<>();
 		try {
 
 			List<SystemUser> availableUsers = userRepository.findAll();
 
 			if (availableUsers.size() > 0) {
-				listResponse.setData(availableUsers);
-				listResponse.setCode(ResponseCode.SUCCESS);
-				listResponse.setStatus(true);
+				List<tz.go.mof.trab.dto.user.UserResponseDto> userResponseDtos = new java.util.ArrayList<>();
+				for (SystemUser user : availableUsers) {
+					userResponseDtos.add(convertToUserResponseDto(user));
+				}
+				userListResponse.setData(userResponseDtos);
+				userListResponse.setCode(ResponseCode.SUCCESS);
+				userListResponse.setStatus(true);
 			} else {
-				listResponse.setData(null);
-				listResponse.setCode(ResponseCode.NO_RECORD_FOUND);
-				listResponse.setStatus(false);
+				userListResponse.setData(null);
+				userListResponse.setCode(ResponseCode.NO_RECORD_FOUND);
+				userListResponse.setStatus(false);
 			}
 
 		} catch (Exception e) {
 			logger.error("Failed to retrieve all users with error : {} ", e);
-			listResponse.setData(null);
-			listResponse.setCode(ResponseCode.FAILURE);
-			listResponse.setStatus(false);
+			userListResponse.setData(null);
+			userListResponse.setCode(ResponseCode.FAILURE);
+			userListResponse.setStatus(false);
 		}
 
-		return listResponse;
+		return userListResponse;
+	}
+
+	private tz.go.mof.trab.dto.user.UserResponseDto convertToUserResponseDto(SystemUser user) {
+		return tz.go.mof.trab.dto.user.UserResponseDto.builder()
+				.id(user.getId())
+				.username(user.getUsername())
+				.checkNumber(user.getCheckNumber())
+				.address(user.getAddress())
+				.email(user.getEmail())
+				.mobileNumber(user.getMobileNumber())
+				.name(user.getName())
+				.createdBy(user.getCreatedBy())
+				.recordCreatedDate(user.getRecordCreatedDate())
+				.accountNonExpired(user.isAccountNonExpired())
+				.loginAttempt(user.getLoginAttempt())
+				.accountNonLocked(user.isAccountNonLocked())
+				.credentialsNonExpired(user.isCredentialsNonExpired())
+				.enabled(user.isEnabled())
+				.newAccount(user.isNewAccount())
+				.build();
 	}
 
 	@Override

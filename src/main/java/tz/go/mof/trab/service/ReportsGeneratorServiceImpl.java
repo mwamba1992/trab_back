@@ -772,6 +772,14 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
         return response;
     }
 
+    public String getNumberOfDays(Date filling, Date decision) {
+        if (filling == null) return "0";
+        Date endDate = decision != null ? decision : new Date();
+        long diffInMillies = endDate.getTime() - filling.getTime();
+        long days = diffInMillies / 86400000L;
+        return String.valueOf(days);
+    }
+
     @Override
     public Response<String> getExcelAppealReport(List<Appeals> appealsList, String details) throws IOException {
 

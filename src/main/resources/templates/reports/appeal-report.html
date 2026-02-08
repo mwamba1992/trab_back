@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        @page { size: 500mm 297mm; margin: 10mm; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #333; margin: 0; padding: 10px; }
+        .report-header { text-align: center; margin-bottom: 8px; }
+        .report-header img { width: 60px; height: auto; margin-bottom: 4px; }
+        .report-header h1 { font-size: 14px; margin: 0; color: #1a1a2e; text-transform: uppercase; }
+        .report-header h2 { font-size: 12px; margin: 3px 0; color: #333; }
+        .report-header .subtitle { font-size: 9px; color: #666; }
+        .gold-rule { height: 3px; background-color: #c8a415; border: none; margin: 6px 0 8px 0; }
+        .filter-info { font-size: 8px; color: #666; margin-bottom: 6px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 6px; table-layout: fixed; }
+        thead th { background-color: #1a1a2e; color: #ffffff; font-size: 7px; font-weight: bold; padding: 4px 2px; text-align: left; text-transform: uppercase; border: 1px solid #1a1a2e; white-space: nowrap; }
+        tbody td { padding: 3px 2px; font-size: 7px; border: 1px solid #ddd; vertical-align: top; word-wrap: break-word; }
+        tbody tr:nth-child(even) { background-color: #f8f8f8; }
+        tbody tr:nth-child(odd) { background-color: #ffffff; }
+        .amount-cell { text-align: right; font-family: 'Courier New', monospace; }
+        .number-cell { text-align: center; }
+        .nowrap { white-space: nowrap; }
+        .total-row td { font-weight: bold; background-color: #e8e8e8; border-top: 2px solid #c8a415; }
+        .summary-box { margin-top: 10px; padding: 6px 10px; background-color: #f9f9f9; border: 1px solid #ddd; }
+        .summary-box h3 { font-size: 10px; margin: 0 0 3px 0; }
+        .summary-box p { font-size: 9px; margin: 2px 0; }
+        .report-footer { margin-top: 10px; font-size: 7px; color: #999; text-align: center; border-top: 1px solid #ddd; padding-top: 4px; }
+        /* Column widths */
+        .col-sn { width: 3%; }
+        .col-appeal-no { width: 10%; }
+        .col-appellant { width: 12%; }
+        .col-respondent { width: 8%; }
+        .col-tax { width: 7%; }
+        .col-date { width: 6%; }
+        .col-days { width: 4%; }
+        .col-amount { width: 9%; }
+        .col-status { width: 6%; }
+        .col-decided { width: 9%; }
+        .col-remarks { width: 12%; }
+    </style>
+</head>
+<body>
+    <div class="report-header">
+        <img th:src="${logoBase64}" alt="Coat of Arms" style="width:60px;height:auto;margin-bottom:4px;"/>
+        <h1>The United Republic of Tanzania</h1>
+        <h2>Tax Revenue Appeals Board (TRAB)</h2>
+        <hr class="gold-rule"/>
+        <h2 th:text="${reportTitle}">Appeals Report</h2>
+        <p class="subtitle" th:text="${dateRange}">Date Range</p>
+    </div>
+
+    <div class="filter-info" th:if="${filterDescription != null and !filterDescription.isEmpty()}">
+        <span th:text="${filterDescription}">Filters</span>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="number-cell col-sn">S/N</th>
+                <th class="col-appeal-no">Appeal No</th>
+                <th class="col-appellant">Appellant</th>
+                <th class="col-respondent">Respondent</th>
+                <th class="col-tax">Tax Type</th>
+                <th class="col-date">Filing Date</th>
+                <th class="col-date">Decision Date</th>
+                <th class="number-cell col-days">Days</th>
+                <th class="amount-cell col-amount">Amount (TZS)</th>
+                <th class="amount-cell col-amount">Amount (USD)</th>
+                <th class="col-status">Status</th>
+                <th class="col-decided">Decided By</th>
+                <th class="col-remarks">Remarks</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="appeal, iterStat : ${appeals}">
+                <td class="number-cell" th:text="${iterStat.count}">1</td>
+                <td class="nowrap" th:text="${appeal.appealNo}">-</td>
+                <td th:text="${appeal.appellant}">-</td>
+                <td th:text="${appeal.respondent}">-</td>
+                <td th:text="${appeal.taxType}">-</td>
+                <td class="nowrap" th:text="${appeal.filingDate != null} ? ${#dates.format(appeal.filingDate, 'dd/MM/yyyy')} : '-'">-</td>
+                <td class="nowrap" th:text="${appeal.decisionDate != null} ? ${#dates.format(appeal.decisionDate, 'dd/MM/yyyy')} : '-'">-</td>
+                <td class="number-cell" th:text="${appeal.daysOnTrial}">0</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(appeal.amountTzs, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(appeal.amountUsd, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td th:text="${appeal.status}">-</td>
+                <td th:text="${appeal.decidedBy}">-</td>
+                <td th:text="${appeal.remarks}">-</td>
+            </tr>
+            <tr th:if="${appeals == null or appeals.isEmpty()}">
+                <td colspan="13" style="text-align:center; padding: 20px;">No appeals found for the selected criteria.</td>
+            </tr>
+        </tbody>
+        <tfoot th:if="${appeals != null and !appeals.isEmpty()}">
+            <tr class="total-row">
+                <td colspan="7" style="text-align:right;">TOTALS</td>
+                <td class="number-cell" th:text="${totalCount}">0</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(totalTzs, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(totalUsd, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td colspan="3"></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="summary-box" th:if="${appeals != null and !appeals.isEmpty()}">
+        <h3>Summary</h3>
+        <p>Total Appeals: <strong th:text="${totalCount}">0</strong></p>
+        <p>Total Amount (TZS): <strong th:text="${#numbers.formatDecimal(totalTzs, 1, 'COMMA', 2, 'POINT')}">0.00</strong></p>
+        <p>Total Amount (USD): <strong th:text="${#numbers.formatDecimal(totalUsd, 1, 'COMMA', 2, 'POINT')}">0.00</strong></p>
+    </div>
+
+    <div class="report-footer">
+        <p>Generated on <span th:text="${generatedDate}">date</span> | Tax Revenue Appeals Board (TRAB) - Official Report</p>
+    </div>
+</body>
+</html>

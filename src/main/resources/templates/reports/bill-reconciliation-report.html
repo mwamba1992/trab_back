@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 15mm;
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10px;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .report-header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .report-header img {
+            width: 70px;
+            height: auto;
+            margin-bottom: 6px;
+        }
+        .report-header h1 {
+            font-size: 16px;
+            margin: 0;
+            color: #1a1a2e;
+            text-transform: uppercase;
+        }
+        .report-header h2 {
+            font-size: 13px;
+            margin: 4px 0;
+            color: #333;
+        }
+        .report-header .subtitle {
+            font-size: 10px;
+            color: #666;
+        }
+        .gold-rule {
+            height: 3px;
+            background-color: #c8a415;
+            border: none;
+            margin: 8px 0 12px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        thead th {
+            background-color: #1a1a2e;
+            color: #ffffff;
+            font-size: 8px;
+            font-weight: bold;
+            padding: 5px 3px;
+            text-align: left;
+            text-transform: uppercase;
+            border: 1px solid #1a1a2e;
+        }
+        tbody td {
+            padding: 4px 3px;
+            font-size: 8px;
+            border: 1px solid #ddd;
+            vertical-align: top;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f8f8f8;
+        }
+        tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+        .amount-cell {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+        .number-cell {
+            text-align: center;
+        }
+        .total-row td {
+            font-weight: bold;
+            background-color: #e8e8e8;
+            border-top: 2px solid #c8a415;
+        }
+        .status-paid { color: #2e7d32; font-weight: bold; }
+        .status-unpaid { color: #e65100; font-weight: bold; }
+        .status-expired { color: #c62828; font-weight: bold; }
+        .status-summary {
+            margin-top: 12px;
+            display: flex;
+        }
+        .status-box {
+            padding: 6px 12px;
+            margin-right: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+            font-size: 9px;
+            min-width: 80px;
+        }
+        .status-box .count {
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .bg-paid { background-color: #e8f5e9; border-color: #2e7d32; }
+        .bg-unpaid { background-color: #fff3e0; border-color: #e65100; }
+        .bg-expired { background-color: #ffebee; border-color: #c62828; }
+        .summary-box {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        .summary-box h3 {
+            font-size: 11px;
+            margin: 0 0 4px 0;
+        }
+        .summary-box p {
+            font-size: 10px;
+            margin: 2px 0;
+        }
+        .report-footer {
+            margin-top: 14px;
+            font-size: 8px;
+            color: #999;
+            text-align: center;
+            border-top: 1px solid #ddd;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-header">
+        <img th:src="${logoBase64}" alt="Coat of Arms" style="width:70px;height:auto;margin-bottom:6px;"/>
+        <h1>The United Republic of Tanzania</h1>
+        <h2>Tax Revenue Appeals Board (TRAB)</h2>
+        <hr class="gold-rule"/>
+        <h2>Bill Reconciliation Report</h2>
+        <p class="subtitle" th:text="${dateRange}">Date Range</p>
+    </div>
+
+    <!-- Status Summary Boxes -->
+    <div class="status-summary">
+        <div class="status-box bg-paid">
+            <div class="count" th:text="${paidCount}">0</div>
+            <div>Paid</div>
+        </div>
+        <div class="status-box bg-unpaid">
+            <div class="count" th:text="${unpaidCount}">0</div>
+            <div>Unpaid</div>
+        </div>
+        <div class="status-box bg-expired">
+            <div class="count" th:text="${expiredCount}">0</div>
+            <div>Expired</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="number-cell">S/N</th>
+                <th>Control Number</th>
+                <th>Bill Reference</th>
+                <th>App Type</th>
+                <th>Payer Name</th>
+                <th>Currency</th>
+                <th class="amount-cell">Billed Amount</th>
+                <th class="amount-cell">Paid Amount</th>
+                <th class="amount-cell">Variance</th>
+                <th>Generated Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="item, iterStat : ${reconciliations}">
+                <td class="number-cell" th:text="${item.serialNumber}">1</td>
+                <td th:text="${item.controlNumber}">-</td>
+                <td th:text="${item.billReference}">-</td>
+                <td th:text="${item.appType}">-</td>
+                <td th:text="${item.payerName}">-</td>
+                <td th:text="${item.currency}">-</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(item.billedAmount, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(item.paidAmount, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(item.variance, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td th:text="${item.generatedDate != null} ? ${#dates.format(item.generatedDate, 'dd/MM/yyyy')} : '-'">-</td>
+                <td th:classappend="${item.status == 'Paid'} ? 'status-paid' : (${item.status == 'Unpaid'} ? 'status-unpaid' : 'status-expired')"
+                    th:text="${item.status}">-</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="6" style="text-align:right;">TOTALS</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(totalBilled, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(totalPaid, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(totalVariance, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td colspan="2"></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="summary-box">
+        <h3>Summary</h3>
+        <p>Total Bills: <strong th:text="${totalBills}">0</strong></p>
+        <p>Total Billed: <strong th:text="${#numbers.formatDecimal(totalBilled, 1, 'COMMA', 2, 'POINT')}">0.00</strong></p>
+        <p>Total Paid: <strong th:text="${#numbers.formatDecimal(totalPaid, 1, 'COMMA', 2, 'POINT')}">0.00</strong></p>
+        <p>Total Variance: <strong th:text="${#numbers.formatDecimal(totalVariance, 1, 'COMMA', 2, 'POINT')}">0.00</strong></p>
+    </div>
+
+    <div class="report-footer">
+        <p>Generated on <span th:text="${generatedDate}">date</span> | Tax Revenue Appeals Board (TRAB) - Official Report</p>
+    </div>
+</body>
+</html>

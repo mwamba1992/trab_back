@@ -740,6 +740,13 @@ public class ReportController {
 
     }
 
+    @PostMapping(value = "/age-analysis-report", produces = "application/json")
+    @ResponseBody
+    public List<tz.go.mof.trab.dto.report.CaseAgeAnalysisDTO> getAgeAnalysisReport(
+            @RequestBody tz.go.mof.trab.dto.report.AgeAnalysisReportDto filter) {
+        return appealsRepository.findAgeAnalysis(filter.getDayFrom(), filter.getDayTo());
+    }
+
     public String getResponseCode(String txtCode){
         String responseCode[] = txtCode.split(";");
         String fullResponse = "";

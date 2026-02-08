@@ -940,6 +940,29 @@ public class AppealController {
         return appealService.registerForRetrial(req);
     }
 
+    @GetMapping(value = "/get-appeal/{id}", produces = "application/json")
+    @ResponseBody
+    public Response<Appeals> getAppealById(@PathVariable("id") Long id) {
+        Response<Appeals> response = new Response<>();
+        try {
+            Appeals appeal = appealsRepository.findByAppealId(id);
+            if (appeal != null) {
+                response.setData(appeal);
+                response.setCode(ResponseCode.SUCCESS);
+                response.setStatus(true);
+            } else {
+                response.setCode(ResponseCode.NO_RECORD_FOUND);
+                response.setStatus(false);
+                response.setDescription("Appeal not found");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setCode(ResponseCode.FAILURE);
+            response.setStatus(false);
+            response.setDescription("Error occurred while fetching appeal");
+        }
+        return response;
+    }
 
 }
 

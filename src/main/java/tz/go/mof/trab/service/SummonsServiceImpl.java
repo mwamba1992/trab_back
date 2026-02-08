@@ -41,10 +41,12 @@ public class SummonsServiceImpl implements  SummonsService{
     private JudgeRepository judgeRepository;
 
     @Override
-    public List<Summons> searchSummons(BillSearchDto billSearchDto) {
+    public List<Summons> searchSummons(BillSearchDto billSearchDto) throws java.text.ParseException {
         logger.info("startDate: " + billSearchDto.getDateFrom() + " dateTo: " +billSearchDto.getDateTo());
 
-        return (List<Summons>) summonsRepository.findAllByOrderBySummonStartDateDesc();
+        java.text.SimpleDateFormat dFormat = new java.text.SimpleDateFormat("yyyy-MM-dd");
+        return summonsRepository.findSummonsBySummonStartDateBetween(
+                dFormat.parse(billSearchDto.getDateFrom()), dFormat.parse(billSearchDto.getDateTo()));
     }
 
     @Override

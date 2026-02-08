@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 15mm;
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10px;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .report-header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .report-header img {
+            width: 70px;
+            height: auto;
+            margin-bottom: 6px;
+        }
+        .report-header h1 {
+            font-size: 16px;
+            margin: 0;
+            color: #1a1a2e;
+            text-transform: uppercase;
+        }
+        .report-header h2 {
+            font-size: 13px;
+            margin: 4px 0;
+            color: #333;
+        }
+        .report-header .subtitle {
+            font-size: 10px;
+            color: #666;
+        }
+        .gold-rule {
+            height: 3px;
+            background-color: #c8a415;
+            border: none;
+            margin: 8px 0 12px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        thead th {
+            background-color: #1a1a2e;
+            color: #ffffff;
+            font-size: 8px;
+            font-weight: bold;
+            padding: 5px 3px;
+            text-align: left;
+            text-transform: uppercase;
+            border: 1px solid #1a1a2e;
+        }
+        tbody td {
+            padding: 4px 3px;
+            font-size: 8px;
+            border: 1px solid #ddd;
+            vertical-align: top;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f8f8f8;
+        }
+        tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+        .amount-cell {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+        .number-cell {
+            text-align: center;
+        }
+        .total-row td {
+            font-weight: bold;
+            background-color: #e8e8e8;
+            border-top: 2px solid #c8a415;
+        }
+        .aging-green { color: #2e7d32; font-weight: bold; }
+        .aging-orange { color: #e65100; font-weight: bold; }
+        .aging-red { color: #c62828; font-weight: bold; }
+        .aging-purple { color: #6a1b9a; font-weight: bold; }
+        .aging-summary {
+            margin-top: 12px;
+            display: flex;
+        }
+        .aging-box {
+            padding: 6px 12px;
+            margin-right: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+            font-size: 9px;
+            min-width: 80px;
+        }
+        .aging-box .count {
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .bg-green { background-color: #e8f5e9; border-color: #2e7d32; }
+        .bg-orange { background-color: #fff3e0; border-color: #e65100; }
+        .bg-red { background-color: #ffebee; border-color: #c62828; }
+        .bg-purple { background-color: #f3e5f5; border-color: #6a1b9a; }
+        .summary-box {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        .summary-box h3 {
+            font-size: 11px;
+            margin: 0 0 4px 0;
+        }
+        .summary-box p {
+            font-size: 10px;
+            margin: 2px 0;
+        }
+        .report-footer {
+            margin-top: 14px;
+            font-size: 8px;
+            color: #999;
+            text-align: center;
+            border-top: 1px solid #ddd;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-header">
+        <img th:src="${logoBase64}" alt="Coat of Arms" style="width:70px;height:auto;margin-bottom:6px;"/>
+        <h1>The United Republic of Tanzania</h1>
+        <h2>Tax Revenue Appeals Board (TRAB)</h2>
+        <hr class="gold-rule"/>
+        <h2>Outstanding Bills Report</h2>
+        <p class="subtitle" th:text="${dateRange}">Date Range</p>
+    </div>
+
+    <!-- Aging Summary Boxes -->
+    <div class="aging-summary">
+        <div class="aging-box bg-green">
+            <div class="count" th:text="${bucket0to30}">0</div>
+            <div>0-30 Days</div>
+        </div>
+        <div class="aging-box bg-orange">
+            <div class="count" th:text="${bucket31to60}">0</div>
+            <div>31-60 Days</div>
+        </div>
+        <div class="aging-box bg-red">
+            <div class="count" th:text="${bucket61to90}">0</div>
+            <div>61-90 Days</div>
+        </div>
+        <div class="aging-box bg-purple">
+            <div class="count" th:text="${bucket90plus}">0</div>
+            <div>90+ Days</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="number-cell">S/N</th>
+                <th>Control Number</th>
+                <th>Bill Reference</th>
+                <th>App Type</th>
+                <th>Payer Name</th>
+                <th>Currency</th>
+                <th class="amount-cell">Billed Amount</th>
+                <th>Generated Date</th>
+                <th>Expiry Date</th>
+                <th class="number-cell">Aging (Days)</th>
+                <th>Aging Bucket</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="bill, iterStat : ${bills}">
+                <td class="number-cell" th:text="${bill.serialNumber}">1</td>
+                <td th:text="${bill.controlNumber}">-</td>
+                <td th:text="${bill.billReference}">-</td>
+                <td th:text="${bill.appType}">-</td>
+                <td th:text="${bill.payerName}">-</td>
+                <td th:text="${bill.currency}">-</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(bill.billedAmount, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td th:text="${bill.generatedDate != null} ? ${#dates.format(bill.generatedDate, 'dd/MM/yyyy')} : '-'">-</td>
+                <td th:text="${bill.expiryDate != null} ? ${#dates.format(bill.expiryDate, 'dd/MM/yyyy')} : '-'">-</td>
+                <td class="number-cell" th:text="${bill.agingDays}">0</td>
+                <td th:classappend="${bill.agingDays le 30} ? 'aging-green' : (${bill.agingDays le 60} ? 'aging-orange' : (${bill.agingDays le 90} ? 'aging-red' : 'aging-purple'))"
+                    th:text="${bill.agingBucket}">-</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="6" style="text-align:right;">TOTAL</td>
+                <td class="amount-cell" th:text="${#numbers.formatDecimal(totalOutstanding, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                <td colspan="4"></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="summary-box">
+        <h3>Summary</h3>
+        <p>Total Outstanding Bills: <strong th:text="${totalBills}">0</strong></p>
+        <p>Total Outstanding Amount: <strong th:text="${#numbers.formatDecimal(totalOutstanding, 1, 'COMMA', 2, 'POINT')}">0.00</strong></p>
+    </div>
+
+    <div class="report-footer">
+        <p>Generated on <span th:text="${generatedDate}">date</span> | Tax Revenue Appeals Board (TRAB) - Official Report</p>
+    </div>
+</body>
+</html>

@@ -6,12 +6,15 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.math.BigDecimal;
+import java.util.Date;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @ToString
 public class PaymentReportDto {
+
+    private int serialNumber;
 
     private String pspReceiptNumber;
 
@@ -21,17 +24,21 @@ public class PaymentReportDto {
 
     private String billId;
 
-    private  String controlNumber;
+    private String controlNumber;
 
     private String transactionDate;
+
+    private Date paymentDate;
+
+    private String pspName;
+
+    private String appType;
 
     private String issuedBy;
 
     private String issuedDate;
 
-    private  String amountInWords;
+    private String amountInWords;
 
     private String outstandingBalance;
-
-
 }

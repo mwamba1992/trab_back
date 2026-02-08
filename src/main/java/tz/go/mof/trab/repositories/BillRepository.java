@@ -10,6 +10,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import tz.go.mof.trab.models.Bill;
 
+import java.util.Date;
 import java.util.List;
 
 
@@ -28,5 +29,9 @@ public interface BillRepository extends PagingAndSortingRepository<Bill, String>
 	List<Bill> findBillByBillControlNumber(String controlNumber);
 
 	List<Bill> findBillByResponseCodeNot(String responseCode);
+
+	List<Bill> findByGeneratedDateBetween(Date startDate, Date endDate);
+
+	List<Bill> findByBillPayedFalseAndGeneratedDateBetween(Date startDate, Date endDate);
 
 }

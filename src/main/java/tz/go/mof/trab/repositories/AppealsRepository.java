@@ -131,6 +131,15 @@ public interface AppealsRepository extends PagingAndSortingRepository<Appeals, L
 	@Query(value = "SELECT ap FROM Appeals ap WHERE ap.appealNo like %:region%  AND ap.dateOfFilling  between :startDate AND :endDate  AND ap.decidedDate is not null")
 	List<Appeals> getAppealsForTrat(String region,   @Param("startDate") @DateTimeFormat(pattern = "yyyy-MM-dd") Date startDate, @Param("endDate") @DateTimeFormat(pattern = "yyyy-MM-dd") Date endDate);
 
+	Appeals findByAppealId(Long appealId);
+
+	@Query("SELECT new tz.go.mof.trab.dto.report.CaseAgeAnalysisDTO(a, DATEDIFF(COALESCE(a.decidedDate, CURRENT_DATE), a.dateOfFilling)) FROM Appeals a WHERE DATEDIFF(COALESCE(a.decidedDate, CURRENT_DATE), a.dateOfFilling) BETWEEN :fromDays AND :toDays ORDER BY a.dateOfFilling DESC")
+	List<tz.go.mof.trab.dto.report.CaseAgeAnalysisDTO> findAgeAnalysis(@Param("fromDays") int fromDays, @Param("toDays") int toDays);
+
+	List<Appeals> findByDateOfFillingBetween(Date startDate, Date endDate);
+
+	@Query("SELECT a FROM Appeals a WHERE a.decidedDate IS NULL AND a.dateOfFilling <= :cutoffDate")
+	List<Appeals> findOverdueAppeals(@Param("cutoffDate") Date cutoffDate);
 
 }
 

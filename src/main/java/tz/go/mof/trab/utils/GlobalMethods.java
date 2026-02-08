@@ -36,6 +36,7 @@ import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.w3c.dom.Node;
@@ -106,6 +107,7 @@ public class GlobalMethods {
     private final CurrencyService currencyService;
 
     @Autowired
+    @Lazy
     private BillService billService;
 
     private final BillItemService billItemService;

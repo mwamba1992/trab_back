@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface SummonsService {
 
-    List<Summons> searchSummons(BillSearchDto billSearchDto);
+    List<Summons> searchSummons(BillSearchDto billSearchDto) throws java.text.ParseException;
     Page<Summons> findByPage();
 
     Response changeJudge(Long summonId, String judgeId);

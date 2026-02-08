@@ -47,7 +47,7 @@ public class UserController {
 
     @RequestMapping(value = "/users", method = RequestMethod.GET)
     @ResponseBody
-    public ListResponse<SystemUser> getAllUsers() {
+    public ListResponse<tz.go.mof.trab.dto.user.UserResponseDto> getAllUsers() {
 
         return userService.getAllUsers();
     }

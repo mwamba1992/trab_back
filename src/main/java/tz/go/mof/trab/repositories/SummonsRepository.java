@@ -19,4 +19,6 @@ public interface SummonsRepository extends PagingAndSortingRepository<Summons, L
     List<Summons> findAllByOrderBySummonStartDateDesc();
 
     Page<Summons> findSummonsBySummonStartDateGreaterThanEqual(Date today, Pageable pageable);
+
+    List<Summons> findSummonsBySummonStartDateBetween(Date startDate, Date endDate);
 }

@@ -31,4 +31,7 @@ public interface PaymentRepository extends PagingAndSortingRepository<Payment, S
    @Query(value = "select pr from Payment pr where date(pr.trxDtm)=:date")
    List<Payment> findPaymentByTrxDtm(@Param("date") Date date);
 
+   @Query("SELECT p FROM Payment p JOIN FETCH p.bill WHERE p.trxDtm BETWEEN :startDate AND :endDate ORDER BY p.bill.appType ASC, p.trxDtm DESC")
+   List<Payment> findPaymentsByDateRange(@Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
 }

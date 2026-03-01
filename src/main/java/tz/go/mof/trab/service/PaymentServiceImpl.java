@@ -56,7 +56,7 @@ public class PaymentServiceImpl implements  PaymentService {
     @Override
     public List<Payment> searchPayments(PaymentSearchDto paymentSearchDto) {
 
-        logger.info("#######  Query Params For Payments #######" + paymentSearchDto);
+        logger.debug("Query params for payments: {}", paymentSearchDto);
 
         String parameter = "";
         String sqlQuery = "";
@@ -143,7 +143,7 @@ public class PaymentServiceImpl implements  PaymentService {
         }else {
             parameter = " where " + parameter;
             sqlQuery = " select * from payment d JOIN bill b ON d.bill_id=b.bill_id " + parameter + " ORDER BY created_date DESC";
-            logger.info("#########" + sqlQuery);
+            logger.debug("SQL query: {}", sqlQuery);
         }
 
         Query q = em.createNativeQuery(sqlQuery, Payment.class);
@@ -197,7 +197,7 @@ public class PaymentServiceImpl implements  PaymentService {
 
         List<Payment> paymentList = q.getResultList();
 
-        logger.info("############  payment List count "  + paymentList.size());
+        logger.debug("Payment list count: {}", paymentList.size());
         return paymentList;
 
     }
@@ -206,7 +206,7 @@ public class PaymentServiceImpl implements  PaymentService {
     @Override
     public List<PaymentSummaryDto> searchPaymentSummary(PaymentSearchDto paymentSearchDto) {
 
-        logger.info("#######  Query Params For Payments #######" + paymentSearchDto);
+        logger.debug("Query params for payments: {}", paymentSearchDto);
 
         String parameter = "";
         String sqlQuery = "";
@@ -249,9 +249,9 @@ public class PaymentServiceImpl implements  PaymentService {
 
         List<Object> objects = q.getResultList();
 
-        List<PaymentSummaryDto> paymentSummaryResponseDtos = new ArrayList<PaymentSummaryDto>();
+        List<PaymentSummaryDto> paymentSummaryResponseDtos = new ArrayList<>();
 
-        if(objects.size()>0){
+        if (!objects.isEmpty()) {
             objects.forEach(o->{
 
                 PaymentSummaryDto paymentSummaryResponseDto = new PaymentSummaryDto();
@@ -270,7 +270,7 @@ public class PaymentServiceImpl implements  PaymentService {
         }
 
 
-        logger.info("############  payment List count "  + objects.size());
+        logger.debug("Payment summary count: {}", objects.size());
         return paymentSummaryResponseDtos;
 
     }

@@ -270,13 +270,8 @@ public class HtmlReportServiceImpl implements HtmlReportService {
     @Override
     public Response<HtmlReportResponseDto> generateJudgeWorkloadReport(ReportFilterDto filter) {
         try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-            String startDateStr = filter.getDateFrom();
-            String endDateStr = filter.getDateTo();
-            Date startDate = sdf.parse(startDateStr);
-            Date endDate = sdf.parse(endDateStr);
-
-            List<Appeals> appeals = appealsRepository.findByDateOfFillingBetween(startDate, endDate);
+            List<Appeals> appeals = new ArrayList<>();
+            appealsRepository.findAll().forEach(appeals::add);
 
             if (appeals.isEmpty()) {
                 return buildNoRecordResponse();
@@ -334,8 +329,7 @@ public class HtmlReportServiceImpl implements HtmlReportService {
 
             dtos.sort(Comparator.comparingInt(JudgeWorkloadReportDto::getTotalCases).reversed());
 
-            SimpleDateFormat displayFormat = new SimpleDateFormat("dd MMMM yyyy");
-            String dateRange = "From " + displayFormat.format(startDate) + " To " + displayFormat.format(endDate);
+            String dateRange = "All Records";
             String generatedDate = new SimpleDateFormat("dd MMMM yyyy HH:mm").format(new Date());
 
             if ("excel".equalsIgnoreCase(filter.getFormat())) {
@@ -719,7 +713,27 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                     }
                     // Hearing Stage filter
                     if (filter.getHearingStage() != null && !filter.getHearingStage().isEmpty()) {
-                        if (a.getProcedingStatus() == null || !filter.getHearingStage().equalsIgnoreCase(a.getProcedingStatus())) return false;
+                        String stage = filter.getHearingStage();
+                        if (stage.equalsIgnoreCase("decided")) {
+                            boolean match = a.getDecidedDate() != null;
+                            if (!match) return false;
+                        } else if (stage.equalsIgnoreCase("pending")) {
+                            boolean match = a.getStatusTrend() != null
+                                    && "c140eb70a2de11ed96425f92e50c79ff".equals(a.getStatusTrend().getId())
+                                    && a.getDecidedDate() == null && a.getSummons() == null;
+                            if (!match) return false;
+                        } else if (stage.equalsIgnoreCase("pending_all")) {
+                            boolean match = a.getDecidedDate() == null;
+                            if (!match) return false;
+                        } else if (stage.equalsIgnoreCase("hearing")) {
+                            boolean match = a.getProcedingStatus() == null
+                                    && a.getSummons() != null && a.getDecidedDate() == null;
+                            if (!match) return false;
+                        } else if (stage.equalsIgnoreCase("judgement")) {
+                            boolean match = "CONCLUDED".equalsIgnoreCase(a.getProcedingStatus())
+                                    && a.getDecidedDate() == null;
+                            if (!match) return false;
+                        }
                     }
                     return true;
                 })
@@ -778,18 +792,27 @@ public class HtmlReportServiceImpl implements HtmlReportService {
     }
 
     private String resolveJudgeName(Appeals appeal) {
-        if (appeal.getSummons() != null) {
-            if (appeal.getSummons().getJud() != null && appeal.getSummons().getJud().getName() != null) {
-                return appeal.getSummons().getJud().getName().toUpperCase();
-            }
-            if (appeal.getSummons().getJudge() != null) {
-                return appeal.getSummons().getJudge().toUpperCase();
-            }
+        // 1. Use Judge entity name (most reliable, consistent)
+        if (appeal.getSummons() != null && appeal.getSummons().getJud() != null
+                && appeal.getSummons().getJud().getName() != null) {
+            return cleanJudgeName(appeal.getSummons().getJud().getName());
         }
-        if (appeal.getDecidedBy() != null) {
-            return appeal.getDecidedBy().toUpperCase();
+        // 2. Fall back to decidedBy for decided cases without summons
+        if (appeal.getDecidedBy() != null && !appeal.getDecidedBy().trim().isEmpty()) {
+            return cleanJudgeName(appeal.getDecidedBy());
         }
         return "UNASSIGNED";
+    }
+
+    private String cleanJudgeName(String name) {
+        return name.trim().toUpperCase()
+                .replaceAll("\\s+", " ")
+                .replace(" V/C", "")
+                .replace(" CHAIRMAN", "")
+                .replace(" V.C", "")
+                .replace("HON.", "")
+                .replace("HON ", "")
+                .trim();
     }
 
     private String resolveDecidedBy(Appeals appeal) {
@@ -911,6 +934,8 @@ public class HtmlReportServiceImpl implements HtmlReportService {
             excelFileCreator.createCell(totalRow, 8, totalTzs, style);
             excelFileCreator.createCell(totalRow, 9, totalUsd, style);
 
+            excelFileCreator.autoSizeColumns(headers.length);
+
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
             excelFileCreator.workbook.close();
@@ -953,6 +978,8 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 excelFileCreator.createCell(row, col++, dto.getRemarks(), style);
             }
 
+            excelFileCreator.autoSizeColumns(headers.length);
+
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
             excelFileCreator.workbook.close();
@@ -991,6 +1018,8 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 excelFileCreator.createCell(row, col++, dto.getOldestCaseDays(), style);
             }
 
+            excelFileCreator.autoSizeColumns(headers.length);
+
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
             excelFileCreator.workbook.close();
@@ -1023,6 +1052,8 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 excelFileCreator.createCell(row, col++, String.format("%.1f", dto.getPercentage()), style);
                 excelFileCreator.createCell(row, col++, Math.round(dto.getAvgDaysInStatus()), style);
             }
+
+            excelFileCreator.autoSizeColumns(headers.length);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
@@ -1060,6 +1091,8 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 excelFileCreator.createCell(row, col++, dto.getDecidedCases(), style);
                 excelFileCreator.createCell(row, col++, dto.getTotalAmountTzs(), style);
             }
+
+            excelFileCreator.autoSizeColumns(headers.length);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
@@ -1100,6 +1133,8 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 excelFileCreator.createCell(row, col++, dto.getProgressStatus(), style);
                 excelFileCreator.createCell(row, col++, dto.getJudgeName(), style);
             }
+
+            excelFileCreator.autoSizeColumns(headers.length);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
@@ -1479,6 +1514,8 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 }
             }
 
+            excelFileCreator.autoSizeColumns(headers.length);
+
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
             excelFileCreator.workbook.close();
@@ -1520,6 +1557,8 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 excelFileCreator.createCell(row, col++, dto.getAgingBucket(), style);
             }
 
+            excelFileCreator.autoSizeColumns(headers.length);
+
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
             excelFileCreator.workbook.close();
@@ -1557,6 +1596,8 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 excelFileCreator.createCell(row, col++, dto.getTotalCollected(), style);
                 excelFileCreator.createCell(row, col++, String.format("%.1f", dto.getCollectionRate()), style);
             }
+
+            excelFileCreator.autoSizeColumns(headers.length);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
@@ -1599,6 +1640,8 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 excelFileCreator.createCell(row, col++, dto.getGeneratedDate() != null ? outputFormat.format(dto.getGeneratedDate()) : "-", style);
                 excelFileCreator.createCell(row, col++, dto.getStatus(), style);
             }
+
+            excelFileCreator.autoSizeColumns(headers.length);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
@@ -1781,6 +1824,9 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 applicationRegisterRepository.findAll().forEach(applications::add);
             }
 
+            // Apply optional filters
+            applications = applyApplicationFilters(applications, filter);
+
             if (applications.isEmpty()) {
                 return buildNoRecordResponse();
             }
@@ -1828,6 +1874,87 @@ public class HtmlReportServiceImpl implements HtmlReportService {
             logger.error("Error generating application report", e);
             return buildErrorResponse();
         }
+    }
+
+    private List<ApplicationRegister> applyApplicationFilters(List<ApplicationRegister> applications, ReportFilterDto filter) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        return applications.stream()
+                .filter(a -> {
+                    // Tax Category filter
+                    if (filter.getTaxType() != null && !filter.getTaxType().isEmpty()) {
+                        if (a.getTaxes() == null || !filter.getTaxType().equals(a.getTaxes().getId())) return false;
+                    }
+                    // Application Status Trend filter
+                    if (filter.getStatusTrend() != null && !filter.getStatusTrend().isEmpty()) {
+                        if (a.getStatusTrend() == null || !filter.getStatusTrend().equals(a.getStatusTrend().getId())) return false;
+                    }
+                    // Financial Year filter
+                    if (filter.getFinancialYear() != null && !filter.getFinancialYear().isEmpty()) {
+                        if (a.getBillId() == null || !filter.getFinancialYear().equals(a.getBillId().getFinancialYear())) return false;
+                    }
+                    // Decision Date From filter
+                    if (filter.getDateOfDecisionFrom() != null && !filter.getDateOfDecisionFrom().isEmpty()) {
+                        try {
+                            Date decisionFrom = sdf.parse(filter.getDateOfDecisionFrom());
+                            if (a.getDateOfDecision() == null || a.getDateOfDecision().before(decisionFrom)) return false;
+                        } catch (Exception ignored) {}
+                    }
+                    // Decision Date To filter
+                    if (filter.getDateOfDecisionTo() != null && !filter.getDateOfDecisionTo().isEmpty()) {
+                        try {
+                            Date decisionTo = sdf.parse(filter.getDateOfDecisionTo());
+                            if (a.getDateOfDecision() == null || a.getDateOfDecision().after(decisionTo)) return false;
+                        } catch (Exception ignored) {}
+                    }
+                    // Region filter (region code embedded in application number)
+                    if (filter.getRegion() != null && !filter.getRegion().isEmpty()) {
+                        if (a.getApplicationNo() == null || !a.getApplicationNo().toUpperCase().contains(filter.getRegion().toUpperCase())) return false;
+                    }
+                    // Won By filter
+                    if (filter.getWonBy() != null && !filter.getWonBy().isEmpty()) {
+                        if (a.getWonBy() == null || !filter.getWonBy().equalsIgnoreCase(a.getWonBy())) return false;
+                    }
+                    // Judge ID filter
+                    if (filter.getJudgeId() != null && !filter.getJudgeId().isEmpty()) {
+                        boolean matchesJudge = false;
+                        if (a.getSummons() != null && a.getSummons().getJud() != null
+                                && filter.getJudgeId().equals(a.getSummons().getJud().getId())) {
+                            matchesJudge = true;
+                        }
+                        if (!matchesJudge) return false;
+                    }
+                    // Chair Person (Judge name) filter
+                    if (filter.getChairPerson() != null && !filter.getChairPerson().isEmpty()) {
+                        boolean matchesChair = false;
+                        if (a.getSummons() != null && a.getSummons().getJud() != null
+                                && a.getSummons().getJud().getName() != null
+                                && a.getSummons().getJud().getName().toUpperCase().contains(filter.getChairPerson().toUpperCase())) {
+                            matchesChair = true;
+                        }
+                        if (!matchesChair && a.getSummons() != null && a.getSummons().getJudge() != null
+                                && a.getSummons().getJudge().toUpperCase().contains(filter.getChairPerson().toUpperCase())) {
+                            matchesChair = true;
+                        }
+                        if (!matchesChair && a.getDecideBy() != null
+                                && a.getDecideBy().toUpperCase().contains(filter.getChairPerson().toUpperCase())) {
+                            matchesChair = true;
+                        }
+                        if (!matchesChair) return false;
+                    }
+                    // Hearing Stage filter
+                    if (filter.getHearingStage() != null && !filter.getHearingStage().isEmpty()) {
+                        String stage = filter.getHearingStage();
+                        if (stage.equalsIgnoreCase("decided")) {
+                            if (a.getDateOfDecision() == null) return false;
+                        } else if (stage.equalsIgnoreCase("pending") || stage.equalsIgnoreCase("pending_all")) {
+                            if (a.getDateOfDecision() != null) return false;
+                        } else if (stage.equalsIgnoreCase("hearing")) {
+                            if (a.getSummons() == null || a.getDateOfDecision() != null) return false;
+                        }
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
     }
 
     // ==================== FINANCIAL YEAR COMPARISON REPORT ====================
@@ -2064,6 +2191,7 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 excelFileCreator.createCell(row, col++, dto.getControlNumber(), style);
                 excelFileCreator.createCell(row, col++, dto.getPaymentStatus(), style);
             }
+            excelFileCreator.autoSizeColumns(headers.length);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
             excelFileCreator.workbook.close();
@@ -2094,6 +2222,7 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 excelFileCreator.createCell(row, col++, dto.getLinkedCases(), style);
                 excelFileCreator.createCell(row, col++, dto.getSummonType(), style);
             }
+            excelFileCreator.autoSizeColumns(headers.length);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
             excelFileCreator.workbook.close();
@@ -2121,6 +2250,7 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 excelFileCreator.createCell(row, col++, dto.getDecisionDate() != null ? outputFormat.format(dto.getDecisionDate()) : "-", style);
                 excelFileCreator.createCell(row, col++, dto.getProgressStatus(), style);
             }
+            excelFileCreator.autoSizeColumns(headers.length);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
             excelFileCreator.workbook.close();
@@ -2148,6 +2278,7 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 excelFileCreator.createCell(row, col++, dto.getDecidedCount(), style);
                 excelFileCreator.createCell(row, col++, dto.getPendingCount(), style);
             }
+            excelFileCreator.autoSizeColumns(headers.length);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
             excelFileCreator.workbook.close();
@@ -2173,6 +2304,7 @@ public class HtmlReportServiceImpl implements HtmlReportService {
                 excelFileCreator.createCell(row, col++, dto.getTaxTypes(), style);
                 excelFileCreator.createCell(row, col++, dto.getTotalAmountTzs(), style);
             }
+            excelFileCreator.autoSizeColumns(headers.length);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             excelFileCreator.workbook.write(baos);
             excelFileCreator.workbook.close();

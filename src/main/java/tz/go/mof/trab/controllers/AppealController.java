@@ -11,6 +11,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -33,6 +35,7 @@ import tz.go.mof.trab.models.*;
 import tz.go.mof.trab.models.Currency;
 import tz.go.mof.trab.repositories.*;
 import tz.go.mof.trab.service.*;
+import tz.go.mof.trab.dto.appeal.*;
 import tz.go.mof.trab.utils.GlobalMethods;
 import tz.go.mof.trab.utils.Response;
 import tz.go.mof.trab.utils.ResponseCode;
@@ -42,6 +45,8 @@ import tz.go.mof.trab.utils.TrabHelper;
 @CrossOrigin(origins = {"*"})
 @RequestMapping("/appeal")
 public class AppealController {
+
+    private static final Logger log = LoggerFactory.getLogger(AppealController.class);
 
     @Value("${tz.go.trab.upload.dir}")
     private String uploadingDir;
@@ -116,26 +121,26 @@ public class AppealController {
 
     @PostMapping(path = "/internalCreate")
     @ResponseBody
-    public Response<Appeals> createAppeal(@RequestBody Map<String, String> req) {
+    public Response<Appeals> createAppeal(@RequestBody CreateAppealDto req) {
         return appealService.createAppeal(req);
     }
 
 
     @PostMapping("/appealEdit")
     @ResponseBody
-    public Response<Appeals> editAppealAlone(@RequestBody Map<String, String> req) {
+    public Response<Appeals> editAppealAlone(@RequestBody EditAppealDto req) {
 
-        TrabHelper.print(req);
+        log.debug("Editing appeal: {}", req);
 
         Response<Appeals> res = new Response<>();
         try {
             ObjectMapper mapper = new ObjectMapper();
 
-            Set AppealAmountSet = new HashSet();
+            Set<AppealAmount> appealAmountSet = new HashSet<>();
             List<Map<String, String>> amountList;
 
-            amountList = mapper.readValue(req.get("amountList"), List.class);
-            Appeals app = appealsRepository.findById(Long.valueOf(req.get("appealId"))).get();
+            amountList = mapper.readValue(req.getAmountList(), List.class);
+            Appeals app = appealsRepository.findById(Long.valueOf(req.getAppealId())).get();
 
             Notice notice = noticeRepository.findBynoticeNo(app.getNoticeNumber());
 
@@ -143,40 +148,40 @@ public class AppealController {
             Appellant appellant = globalMethods.saveAppellant(req, notice);
             app.setAppellant(appellant);
 
-            String dates[] = req.get("date").split("T");
+            String dates[] = req.getDate().split("T");
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
             Date dateOfFilling = formatter.parse(dates[0]);
 
 
-            app.setAssNo(req.get("assNo"));
-            app.setBankNo(req.get("bankNo"));
-            app.setNatOfBus(req.get("natOf"));
-            app.setBillNo(req.get("billNo"));
-            app.setTaxedOff(req.get("taxedOffice"));
-            app.setNatureOfAppeal(req.get("natureOfAppeal"));
+            app.setAssNo(req.getAssNo());
+            app.setBankNo(req.getBankNo());
+            app.setNatOfBus(req.getNatOf());
+            app.setBillNo(req.getBillNo());
+            app.setTaxedOff(req.getTaxedOffice());
+            app.setNatureOfAppeal(req.getNatureOfAppeal());
             app.setUpdatedAt(LocalDateTime.now());
             app.setUpdatedBy(loggedUser.getInfo().getName());
             app.setDateOfFilling(dateOfFilling);
 
-            app.setAppealNo(req.get("appealNo"));
-            app.setAppellantName(req.get("appealantName"));
-            app.setStatusTrend(appealStatusTrendRepository.findById(req.get("status")).get());
+            app.setAppealNo(req.getAppealNo());
+            app.setAppellantName(req.getAppealantName());
+            app.setStatusTrend(appealStatusTrendRepository.findById(req.getStatus()).get());
 
 
             appealAmountRepository.deleteAppealAmounts(app.getAppealId());
 
-            AppealAmountSet = saveAmount(AppealAmountSet, amountList);
-            app.setAppealAmount(AppealAmountSet);
+            appealAmountSet = saveAmount(appealAmountSet, amountList);
+            app.setAppealAmount(appealAmountSet);
 
 
-            app.setAppealNo(req.get("region") + "." + app.getAppealNo().split("\\.")[1]);
+            app.setAppealNo(req.getRegion() + "." + app.getAppealNo().split("\\.")[1]);
             res.setStatus(true);
             res.setDescription("Success");
             res.setCode(ResponseCode.SUCCESS);
 
             appealsRepository.save(app);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error editing appeal", e);
             res.setStatus(false);
             res.setDescription("Problem occurred Please Contact Support! ");
             res.setCode(ResponseCode.FAILURE);
@@ -185,9 +190,9 @@ public class AppealController {
     }
 
 
-    private Set saveAmount(Set appealAmountSet, List<Map<String, String>> amountList) {
+    private Set<AppealAmount> saveAmount(Set<AppealAmount> appealAmountSet, List<Map<String, String>> amountList) {
         AppealAmount appealAmount;
-        if (amountList.size() > 0) {
+        if (!amountList.isEmpty()) {
             for (Map<String, String> amount : amountList) {
                 appealAmount = new AppealAmount();
                 appealAmount.setAmountOnDispute(new BigDecimal(amount.get("amount")));
@@ -205,88 +210,123 @@ public class AppealController {
 
     @PostMapping("/internalEdit")
     @ResponseBody
-    public Response<Appeals> editAppealStatement(@RequestBody Map<String, String> req) {
+    public Response<Appeals> editAppealStatement(@RequestBody EditAppealStatementDto req) {
 
         Response<Appeals> res = new Response<>();
         try {
 
-            TrabHelper.print(req);
+            log.debug("Editing appeal statement: {}", req);
 
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 
-            Appeals app = appealsRepository.findByAppealNoAndTaxType(req.get("appealId"), req.get("taxId"));
-            app.setDecidedDate(formatter.parse(req.get("desicionDate").split("T")[0]));
-            app.setSummaryOfDecree(req.get("remarks"));
-            app.setStatusTrend(appealStatusTrendRepository.findAppealStatusTrendByAppealStatusTrendName(req.get("status")));
-            app.setProcedingStatus(req.get("status"));
-            app.setWonBy(req.get("wonBy"));
-            app.setCopyOfJudgement(req.get("fileName"));
+            Appeals app = appealsRepository.findByAppealNoAndTaxType(req.getAppealId(), req.getTaxId());
+            app.setDecidedDate(formatter.parse(req.getDesicionDate().split("T")[0]));
+            app.setSummaryOfDecree(req.getRemarks());
+            app.setStatusTrend(appealStatusTrendRepository.findAppealStatusTrendByAppealStatusTrendName(req.getStatus()));
+            app.setProcedingStatus(req.getStatus());
+            app.setWonBy(req.getWonBy());
+            app.setCopyOfJudgement(req.getFileName());
 
 
-            if (req.get("judge").isEmpty() || req.get("judge") == null) {
+            if (req.getJudge() != null && !req.getJudge().isEmpty()) {
+                app.setDecidedBy(req.getJudge());
+            } else if (app.getSummons() != null && app.getSummons().getJud() != null) {
                 app.setDecidedBy(app.getSummons().getJud().getName());
-            } else {
-                app.setDecidedBy(req.get("judge"));
             }
 
 
             String filePath = "";
             String binaryData = "";
-            if (req.get("file") != null) {
-                //check if LocationSketch available then upload
-                binaryData = req.get("file");
-                filePath = req.get("fileName");
-
+            if (req.getFile() != null) {
+                binaryData = req.getFile();
+                filePath = "Appeal_" + app.getAppealId() + ".pdf";
+                app.setCopyOfJudgement(filePath);
 
                 if (!new File(uploadingDir).exists()) {
-                    boolean success = new File(uploadingDir).mkdirs();
-                    if (!success) {
-                    }
+                    new File(uploadingDir).mkdirs();
                 }
 
                 File fileToCreate = new File(uploadingDir, filePath);
-
-
-                if (!fileToCreate.exists()) {
-                    byte[] decodedBytes = Base64.getDecoder().decode(binaryData);
-                    FileUtils.writeByteArrayToFile(fileToCreate, decodedBytes);
-                }
-
-
+                byte[] decodedBytes = Base64.getDecoder().decode(binaryData);
+                FileUtils.writeByteArrayToFile(fileToCreate, decodedBytes);
             }
 
 
             appealsRepository.save(app);
+
+            // Process aggregated/consolidated appeals - aggregatedAppeals is a JSON array of appeal database IDs e.g. "[40413, 40414]"
+            if (req.getAggregatedAppeals() != null && !req.getAggregatedAppeals().isEmpty()) {
+                ObjectMapper mapper = new ObjectMapper();
+                List<Long> aggregatedIds = mapper.readValue(req.getAggregatedAppeals(), new com.fasterxml.jackson.core.type.TypeReference<List<Long>>() {});
+
+                for (Long aggId : aggregatedIds) {
+                    // Skip the main appeal already processed above
+                    if (app.getAppealId().equals(aggId)) {
+                        continue;
+                    }
+
+                    Appeals aggAppeal = appealsRepository.findByAppealId(aggId);
+                    if (aggAppeal == null) {
+                        log.warn("Aggregated appeal not found for id: {}", aggId);
+                        continue;
+                    }
+
+                    // Apply same decision details to all consolidated appeals
+                    aggAppeal.setDecidedDate(formatter.parse(req.getDesicionDate().split("T")[0]));
+                    aggAppeal.setSummaryOfDecree(req.getRemarks());
+                    aggAppeal.setStatusTrend(appealStatusTrendRepository.findAppealStatusTrendByAppealStatusTrendName(req.getStatus()));
+                    aggAppeal.setProcedingStatus(req.getStatus());
+                    aggAppeal.setWonBy(req.getWonBy());
+
+                    // Set judge
+                    if (req.getJudge() != null && !req.getJudge().isEmpty()) {
+                        aggAppeal.setDecidedBy(req.getJudge());
+                    } else if (aggAppeal.getSummons() != null && aggAppeal.getSummons().getJud() != null) {
+                        aggAppeal.setDecidedBy(aggAppeal.getSummons().getJud().getName());
+                    }
+
+                    // Assign copy of judgement file - each consolidated appeal gets its own file copy
+                    if (req.getFile() != null) {
+                        String aggFilePath = "Appeal_" + aggAppeal.getAppealId() + ".pdf";
+                        aggAppeal.setCopyOfJudgement(aggFilePath);
+
+                        File aggFileToCreate = new File(uploadingDir, aggFilePath);
+                        byte[] aggDecodedBytes = Base64.getDecoder().decode(req.getFile());
+                        FileUtils.writeByteArrayToFile(aggFileToCreate, aggDecodedBytes);
+                    }
+
+                    appealsRepository.save(aggAppeal);
+                    log.debug("Aggregated appeal {} decision updated", aggAppeal.getAppealNo());
+                }
+            }
+
             res.setCode(ResponseCode.SUCCESS);
             res.setDescription("Appeal Decision Updated Successful");
 
 
         } catch (Exception e) {
+            log.error("Error updating appeal decision", e);
             res.setCode(ResponseCode.FAILURE);
-            e.printStackTrace();
             res.setStatus(false);
             res.setDescription("Error occurred while editing Appeal");
-
         }
         return res;
     }
 
     @PostMapping("/internalSearch")
     @ResponseBody
-    public List<Appeals> searchAppeal(@RequestBody Map<String, String> req) {
-        return appealsRepository.getAppeals(Long.valueOf(req.get("statusId")), req.get("token"));
+    public List<Appeals> searchAppeal(@RequestBody AppealSearchDto req) {
+        return appealsRepository.getAppeals(Long.valueOf(req.getStatusId()), req.getToken());
 
     }
 
     @GetMapping(value = "/getCategory", produces = "application/json")
     @ResponseBody
-    public List<Map<String, String>> getCategoryStats() {
+    public List<CategoryStatsDto> getCategoryStats() {
 
-        List<Map<String, String>> result = new ArrayList<>();
-        ;
-        Map<String, String> res;
+        List<CategoryStatsDto> result = new ArrayList<>();
 
-        String[] color = new String[10]; // declare with size
+        String[] color = new String[10];
         color[0] = "#3498db";
         color[1] = "#9b59b6";
         color[2] = "#2ecc71";
@@ -294,7 +334,7 @@ public class AppealController {
 
         List<Object> cat = appealsRepository.getCategory();
         int i = 0;
-        BigInteger sum = new BigInteger("0"); //
+        BigInteger sum = new BigInteger("0");
 
         for (Object ob : cat) {
             Object[] fields = (Object[]) ob;
@@ -303,18 +343,17 @@ public class AppealController {
         }
 
         for (Object ob : cat) {
-
-            res = new HashMap<>();
+            CategoryStatsDto dto = new CategoryStatsDto();
             Object[] fields = (Object[]) ob;
             String name = (String) fields[0];
             BigInteger value = (BigInteger) fields[1];
-            res.put("name", name);
-            res.put("y", Double.toString(value.doubleValue() / sum.doubleValue()));
-            res.put("color", color[i]);
+            dto.setName(name);
+            dto.setY(Double.toString(value.doubleValue() / sum.doubleValue()));
+            dto.setColor(color[i]);
 
             i++;
 
-            result.add(res);
+            result.add(dto);
         }
 
         return result;
@@ -324,20 +363,15 @@ public class AppealController {
 
     @GetMapping(value = "/gettopappelant", produces = "application/json")
     @ResponseBody
-    public List<Map<String, String>> getTopAppealing() {
+    public List<TopAppellantDto> getTopAppealing() {
 
-        List<Map<String, String>> result = new ArrayList<>();
-
-        Map<String, String> res;
+        List<TopAppellantDto> result = new ArrayList<>();
 
         List<Object> top = appealsRepository.getListAppeleant();
 
         for (Object ob : top) {
-
             Object[] fields = (Object[]) ob;
-
-            res = new HashMap<>();
-
+            TopAppellantDto dto = new TopAppellantDto();
 
             String appeleantName = (String) fields[0];
             BigDecimal amountTZS = (BigDecimal) fields[1];
@@ -346,18 +380,15 @@ public class AppealController {
             BigDecimal allowedUSD = (BigDecimal) fields[4];
             String outComeDesicion = (String) fields[5];
 
+            dto.setName(appeleantName.toUpperCase());
+            dto.setAmtTZS(amountTZS.toString());
+            dto.setAmtUSD(amountUSD.toString());
+            dto.setAllTZS(allowedTZS.toString());
+            dto.setAllUSD(allowedUSD.toString());
+            dto.setDesicion(outComeDesicion);
 
-            res.put("name", appeleantName.toUpperCase());
-            res.put("amtTZS", amountTZS.toString());
-            res.put("amtUSD", amountUSD.toString());
-            res.put("allTZS", allowedTZS.toString());
-            res.put("allUSD", allowedUSD.toString());
-            res.put("desicion", outComeDesicion);
-
-
-            result.add(res);
+            result.add(dto);
         }
-
 
         return result;
     }
@@ -365,42 +396,35 @@ public class AppealController {
 
     @GetMapping(value = "/gettaxinfo", produces = "application/json")
     @ResponseBody
-    public List<Map<String, String>> getTypeOfTaxInfo() {
-
+    public List<TaxTypeInfoDto> getTypeOfTaxInfo() {
 
         try {
-            List<Map<String, String>> result = new ArrayList<>();
-
-            Map<String, String> res;
+            List<TaxTypeInfoDto> result = new ArrayList<>();
 
             List<Object> top = appealsRepository.getTaxTypeInfo();
 
             for (Object oj : top) {
                 Object[] fields = (Object[]) oj;
+                TaxTypeInfoDto dto = new TaxTypeInfoDto();
 
-
-                res = new HashMap<>();
                 String taxTypeName = (String) fields[0];
                 BigDecimal amountTZS = (BigDecimal) fields[1];
                 BigDecimal amountUSD = (BigDecimal) fields[2];
                 BigDecimal allowedTZS = (BigDecimal) fields[3];
                 BigDecimal allowedUSD = (BigDecimal) fields[4];
 
-                res.put("name", taxTypeName);
-                res.put("amtTZS", amountTZS.toString());
-                res.put("amtUSD", amountUSD.toString());
-                res.put("allTZS", allowedTZS.toString());
-                res.put("allUSD", allowedUSD.toString());
+                dto.setName(taxTypeName);
+                dto.setAmtTZS(amountTZS.toString());
+                dto.setAmtUSD(amountUSD.toString());
+                dto.setAllTZS(allowedTZS.toString());
+                dto.setAllUSD(allowedUSD.toString());
 
-
-                result.add(res);
-
+                result.add(dto);
             }
-
 
             return result;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting tax type info", e);
             return null;
         }
 
@@ -408,24 +432,23 @@ public class AppealController {
 
     @PostMapping("/hearingEdit")
     @ResponseBody
-    public Response updateHearingInfo(@RequestBody Map<String, String> req) {
+    public Response updateHearingInfo(@RequestBody HearingEditDto req) {
 
-        Response res = new Response();
+        Response<?> res = new Response<>();
         try {
+            log.debug("Updating hearing info: {}", req);
 
-            System.out.println(req);
-
-            Appeals app = appealsRepository.findById(Long.valueOf(req.get("appealId"))).get();
+            Appeals app = appealsRepository.findById(Long.valueOf(req.getAppealId())).get();
 
 
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 
 
-            if (req.get("type").equals("1")) {
+            if ("1".equals(req.getType())) {
                 app.setProcedingStatus("CONCLUDED");
-                String concludingDate = req.get("concludingDate");
+                String concludingDate = req.getConcludingDate();
                 Date concludeDate = formatter.parse(concludingDate);
-                String dateOfDecision = req.get("dateDesicion");
+                String dateOfDecision = req.getDateDesicion();
                 Date noticeDate = formatter.parse(dateOfDecision);
                 app.setConcludingDate(concludeDate);
                 app.setDateOfTheLastOrder(noticeDate);
@@ -436,20 +459,20 @@ public class AppealController {
                 Summons summon = app.getSummons();
                 String start;
                 String end;
-                if (!req.get("start").isEmpty()) {
-                    start = req.get("start").split("T")[0];
+                if (req.getStart() != null && !req.getStart().isEmpty()) {
+                    start = req.getStart().split("T")[0];
                     Date newStart = formatter.parse(start);
                     summon.setSummonStartDate(newStart);
                 }
 
-                if (!req.get("end").isEmpty()) {
-                    end = req.get("end").split("T")[0];
+                if (req.getEnd() != null && !req.getEnd().isEmpty()) {
+                    end = req.getEnd().split("T")[0];
                     Date newEnd = formatter.parse(end);
                     summon.setSummonEndDate(newEnd);
                 }
 
-                if (!req.get("time").isEmpty()) {
-                    summon.setTime(req.get("time") + " HRS");
+                if (req.getTime() != null && !req.getTime().isEmpty()) {
+                    summon.setTime(req.getTime() + " HRS");
                 }
                 app.setSummons(summon);
                 appealsRepository.save(app);
@@ -460,11 +483,10 @@ public class AppealController {
 
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error updating hearing info", e);
             res.setCode(ResponseCode.FAILURE);
             res.setStatus(false);
             res.setDescription("Error Occurred During Update");
-
         }
         return res;
     }
@@ -474,11 +496,10 @@ public class AppealController {
     @ResponseBody
     public Response uploadFile(@RequestParam MultipartFile file, @RequestParam String appeal, @RequestParam String remarks) throws IllegalStateException, IOException {
 
-
-        Response res = new Response();
+        Response<?> res = new Response<>();
         Appeals appeals = appealsRepository.findByappealNo(appeal);
-        System.out.println("appeal: " + appeals.toString());
-        Set evidenceSet = appeals.getAnnextors();
+        log.debug("Processing file upload for appeal: {}", appeals.getAppealNo());
+        Set<Evidence> evidenceSet = appeals.getAnnextors();
 
         Evidence evi = new Evidence();
         evi.setFileName(file.getOriginalFilename());
@@ -486,22 +507,18 @@ public class AppealController {
         evi.setEvidenceRemarks(remarks);
 
         try {
-            //Evidence newEvi = evidenceRepo.save(evi);
             evidenceSet.add(evi);
-
             appeals.setAnnextors(evidenceSet);
             appealsRepository.save(appeals);
         } catch (Exception e) {
-            System.out.println("inside errors");
-            e.printStackTrace();
+            log.error("Error saving evidence for appeal", e);
         }
 
-        System.out.println(String.format("File name '%s' uploaded successfully.", file.getOriginalFilename()));
+        log.info("File '{}' uploaded successfully", file.getOriginalFilename());
         File newFile = new File(uploadingDir + file.getOriginalFilename());
         file.transferTo(newFile);
         res.setStatus(true);
         return res;
-
     }
 
     @GetMapping(value = "/billItems/{billId}", produces = "application/json")
@@ -522,9 +539,9 @@ public class AppealController {
 
     @PostMapping(path = "/search-payments", produces = "application/json")
     @ResponseBody
-    public List<Payment> getPayments(@RequestBody Map<String, String> req) throws IllegalStateException {
+    public List<Payment> getPayments(@RequestBody PaymentSearchDto req) throws IllegalStateException {
 
-        return globalMethods.findPaymentByCreature(req.get("controlNumber"), req.get("pspRef"), req.get("bank"), req.get("startDate"), req.get("endDate"));
+        return globalMethods.findPaymentByCreature(req.getControlNumber(), req.getPspRef(), req.getBank(), req.getStartDate(), req.getEndDate());
 
     }
 
@@ -539,49 +556,49 @@ public class AppealController {
 
     @PostMapping(path = "/find-by-appeal-no", produces = "application/json")
     @ResponseBody
-    public Appeals findByAppealNo(@RequestBody Map<String, String> req) throws IllegalStateException {
-        return appealsRepository.findByAppealNo(req.get("no"));
+    public Appeals findByAppealNo(@RequestBody AppealNoDto req) throws IllegalStateException {
+        return appealsRepository.findByAppealNo(req.getNo());
     }
 
     @PostMapping(path = "/update-filled-trat", produces = "application/json")
     @ResponseBody
-    public void updateFilledTrat(@RequestBody Map<String, String> req) throws IllegalStateException {
+    public void updateFilledTrat(@RequestBody AppealNoDto req) throws IllegalStateException {
 
-        System.out.println("appeal number: " + req);
-        Appeals appeals = appealsRepository.findByappealNo(req.get("appealNumber"));
+        log.debug("Updating filled TRAT for appeal: {}", req.getAppealNumber());
+        Appeals appeals = appealsRepository.findByappealNo(req.getAppealNumber());
         appeals.setIsFilledTrat(true);
         appealsRepository.save(appeals);
     }
 
     @PostMapping(path = "/update-served-by", produces = "application/json")
     @ResponseBody
-    public Response<AppealServedBy> updateServedBy(@RequestBody Map<String, String> req) throws IllegalStateException {
+    public Response<AppealServedBy> updateServedBy(@RequestBody UpdateServedByDto req) throws IllegalStateException {
 
 
-        TrabHelper.print(req);
+        log.debug("Updating served by info: {}", req);
 
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
         Response<AppealServedBy> appealsResponse = new Response<>();
         try {
 
-            Appeals appeals = appealsRepository.findAppealsByAppealNoAndTax_Id(req.get("appNo"), req.get("tax")).get(0);
+            Appeals appeals = appealsRepository.findAppealsByAppealNoAndTax_Id(req.getAppNo(), req.getTax()).get(0);
             AppealServedBy appealServedBy = new AppealServedBy();
-            appealServedBy.setAppName(req.get("appName"));
-            appealServedBy.setAppPhone(req.get("appPhone"));
-            appealServedBy.setAppDate(formatter.parse(req.get("appDate").split("T")[0]));
+            appealServedBy.setAppName(req.getAppName());
+            appealServedBy.setAppPhone(req.getAppPhone());
+            appealServedBy.setAppDate(formatter.parse(req.getAppDate().split("T")[0]));
 
-            appealServedBy.setResoName(req.get("resoName"));
-            appealServedBy.setResoPhone(req.get("resoPhone"));
-            appealServedBy.setResoDate(formatter.parse(req.get("resoDate").split("T")[0]));
+            appealServedBy.setResoName(req.getResoName());
+            appealServedBy.setResoPhone(req.getResoPhone());
+            appealServedBy.setResoDate(formatter.parse(req.getResoDate().split("T")[0]));
 
 
             String filePath = "";
             String binaryData = "";
-            if (req.get("file1") != null) {
-                appealServedBy.setAppellantFile(req.get("fileName1"));
+            if (req.getFile1() != null) {
+                appealServedBy.setAppellantFile(req.getFileName1());
                 //check if LocationSketch available then upload
-                binaryData = req.get("file1");
-                filePath = req.get("fileName1");
+                binaryData = req.getFile1();
+                filePath = req.getFileName1();
 
 
                 if (!new File(uploadingDir).exists()) {
@@ -603,11 +620,11 @@ public class AppealController {
 
             String filePath2 = "";
             String binaryData2 = "";
-            if (req.get("file2") != null) {
-                appealServedBy.setRespondentFile(req.get("fileName2"));
+            if (req.getFile2() != null) {
+                appealServedBy.setRespondentFile(req.getFileName2());
                 //check if LocationSketch available then upload
-                binaryData2 = req.get("file2");
-                filePath2 = req.get("fileName2");
+                binaryData2 = req.getFile2();
+                filePath2 = req.getFileName2();
 
 
                 if (!new File(uploadingDir).exists()) {
@@ -636,37 +653,34 @@ public class AppealController {
             appealsResponse.setStatus(true);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error updating served by info", e);
             appealsResponse.setCode(ResponseCode.FAILURE);
             appealsResponse.setStatus(false);
             appealsResponse.setData(null);
             appealsResponse.setDescription("Failure");
-
         }
         return appealsResponse;
     }
 
     @PostMapping(path = "/appeals-date", produces = "application/json")
     @ResponseBody
-    public Page<Appeals> getAppealsByDateRange(@RequestBody Map<String, String> req) throws IllegalStateException {
-
-        TrabHelper.print(req);
+    public Page<Appeals> getAppealsByDateRange(@RequestBody AppealDateRangeDto req) throws IllegalStateException {
 
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
         Pageable pageable = PageRequest.of(0, 10000, Sort.by("appealId").descending());
         Date start = null;
         Date end = null;
         try {
-            start = formatter.parse(req.get("dateFrom").split("T")[0]);
-            end = formatter.parse(req.get("dateTo").split("T")[0]);
+            start = formatter.parse(req.getDateFrom().split("T")[0]);
+            end = formatter.parse(req.getDateTo().split("T")[0]);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error parsing date range", e);
         }
 
-        if (req.get("tax") == null || req.get("tax").isEmpty())
+        if (req.getTax() == null || req.getTax().isEmpty())
             return appealsRepository.findAppealsByDateOfFillingBetweenOrderByDateOfFillingAsc(start, end, pageable);
         else {
-            return appealsRepository.findAppealsByDateOfFillingBetweenAndTax_IdOrderByDateOfFillingAsc(start, end, req.get("tax"), pageable);
+            return appealsRepository.findAppealsByDateOfFillingBetweenAndTax_IdOrderByDateOfFillingAsc(start, end, req.getTax(), pageable);
         }
 
     }
@@ -674,30 +688,30 @@ public class AppealController {
 
     @PostMapping(path = "load-backlog", produces = "application/json")
     @ResponseBody
-    public Response uploadLogBack(@RequestBody Map<String, String> requestBody) {
-        TrabHelper.print(requestBody);
+    public Response uploadLogBack(@RequestBody BacklogAppealDto requestBody) {
+        log.debug("Loading backlog appeal: {}", requestBody);
         return appealService.uploadAppealManually(requestBody);
     }
 
     @PostMapping(path = "load-backlog-appeal", produces = "application/json")
     @ResponseBody
-    public Response uploadLogBackAppeal(@RequestBody Map<String, String> requestBody) {
+    public Response uploadLogBackAppeal(@RequestBody BacklogCheckDto requestBody) {
 
 
-        TrabHelper.print(requestBody);
+        log.debug("Checking backlog appeal: {}", requestBody);
 
 
-        Region region = regionRepository.findById(requestBody.get("region")).get();
-        String appealNo = region.getCode() + "." + requestBody.get("appealNo");
+        Region region = regionRepository.findById(requestBody.getRegion()).get();
+        String appealNo = region.getCode() + "." + requestBody.getAppealNo();
 
-        System.out.println("Appeal No" + appealNo);
-        TaxType taxType = taxTypeRepository.findById(requestBody.get("tax")).get();
-        System.out.println("Taxes" + taxType.getTaxName());
+        log.debug("Checking backlog appeal - Appeal No: {}", appealNo);
+        TaxType taxType = taxTypeRepository.findById(requestBody.getTax()).get();
+        log.debug("Tax type: {}", taxType.getTaxName());
 
-        Response response = new Response();
+        Response<?> response = new Response<>();
 
-        if (appealsRepository.findAppealsByAppealNoAndTax_Id(appealNo, requestBody.get("tax")).size() > 0) {
-            response = new Response();
+        if (!appealsRepository.findAppealsByAppealNoAndTax_Id(appealNo, requestBody.getTax()).isEmpty()) {
+            response = new Response<>();
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("Appeal already exist");
             response.setStatus(false);
@@ -711,9 +725,9 @@ public class AppealController {
 
     @PostMapping(path = "load-backlog-pending", produces = "application/json")
     @ResponseBody
-    public Response uploadLogBackPending(@RequestBody Map<String, String> req) {
+    public Response uploadLogBackPending(@RequestBody BacklogPendingDto req) {
 
-        Response res = new Response();
+        Response<Summons> res = new Response<>();
 
         try {
             Summons summons = new Summons();
@@ -723,9 +737,9 @@ public class AppealController {
 
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 
-            String startDates[] = req.get("startDate").split("T");
-            String endDates[] = req.get("endDate").split("T");
-            String lastOrderDates[] = req.get("lastOrderDate").split("T");
+            String startDates[] = req.getStartDate().split("T");
+            String endDates[] = req.getEndDate().split("T");
+            String lastOrderDates[] = req.getLastOrderDate().split("T");
 
 
             startDate = formatter.parse(startDates[0]);
@@ -747,28 +761,25 @@ public class AppealController {
 
             SummonsAppeal summonsAppeals = new SummonsAppeal();
 
-            Judge judge = judgeService.findById(req.get("judge"));
+            Judge judge = judgeService.findById(req.getJudge());
 
             summons.setJudge(judge.getName());
             summons.setJud(judge);
 
 
-            mapList = mapper.readValue(req.get("appList"), List.class);
+            mapList = mapper.readValue(req.getAppList(), List.class);
 
-            if (mapList.size() < 1) {
-                res.setDescription("Please select Appeals or Applications For Summons creation!!!");
+            if (mapList.isEmpty()) {
+                res.setDescription("Please select Appeals or Applications for Summons creation");
                 res.setStatus(false);
                 res.setData(null);
                 res.setCode(ResponseCode.FAILURE);
                 return res;
             }
 
-
-            if (mapList.size() > 0) {
-                mapList.forEach(x -> {
-                    appList.set(appList + " , " + x.get("id"));
-                });
-            }
+            mapList.forEach(x -> {
+                appList.set(appList + " , " + x.get("id"));
+            });
 
             SystemUser user = userRepository.findById(loggedUser.getInfo().getId()).get();
 
@@ -778,8 +789,8 @@ public class AppealController {
             summons.setSummonEndDate(endDate);
             summons.setSystemUser(user);
             summons.setCreatedDate(new Date());
-            summons.setMemberOne(req.get("memberOne"));
-            summons.setMemberTwo(req.get("memberTwo"));
+            summons.setMemberOne(req.getMemberOne());
+            summons.setMemberTwo(req.getMemberTwo());
 
             Summons newSummons = summonsRepository.save(summons);
 
@@ -809,9 +820,9 @@ public class AppealController {
             res.setData(newSummons);
             return res;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error creating summons", e);
             res.setCode(ResponseCode.FAILURE);
-            res.setDescription("Error Occured");
+            res.setDescription("Error Occurred");
             res.setStatus(false);
             return res;
         }
@@ -821,16 +832,16 @@ public class AppealController {
     @GetMapping(value = "/mark-delete-appeal/{id}", produces = "application/json")
     @ResponseBody
     public Response markForDelete(@PathVariable("id") Long id) {
-        Response response = new Response();
+        Response<?> response = new Response<>();
 
         try {
-
             Appeals appeal = appealsRepository.findById(id).get();
 
             if (appeal == null) {
                 response.setCode(ResponseCode.FAILURE);
                 response.setStatus(false);
                 response.setDescription("Appeal Doesnt exist");
+                return response;
             }
 
             appeal.setInitiatedForDelete(true);
@@ -846,10 +857,10 @@ public class AppealController {
             return response;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error marking appeal for delete", e);
             response.setCode(ResponseCode.FAILURE);
             response.setStatus(false);
-            response.setDescription("System issue you can perform this now");
+            response.setDescription("System issue, cannot perform this now");
             return response;
         }
     }
@@ -857,17 +868,17 @@ public class AppealController {
 
     @GetMapping(value = "/unmark-delete-appeal/{id}", produces = "application/json")
     @ResponseBody
-    public Response  removeFromMarkDelete(@PathVariable("id") Long id) {
-        Response response = new Response();
+    public Response removeFromMarkDelete(@PathVariable("id") Long id) {
+        Response<?> response = new Response<>();
 
         try {
-
             Appeals appeal = appealsRepository.findById(id).get();
 
             if (appeal == null) {
                 response.setCode(ResponseCode.FAILURE);
                 response.setStatus(false);
                 response.setDescription("Appeal Doesnt exist");
+                return response;
             }
 
             appeal.setInitiatedForDelete(false);
@@ -883,10 +894,10 @@ public class AppealController {
             return response;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error unmarking appeal for delete", e);
             response.setCode(ResponseCode.FAILURE);
             response.setStatus(false);
-            response.setDescription("System issue you can perform this now");
+            response.setDescription("System issue, cannot perform this now");
             return response;
         }
     }
@@ -895,7 +906,7 @@ public class AppealController {
     @ResponseBody
     public Response deleteAppeal(@PathVariable("id") Long id) {
 
-        Response response = new Response();
+        Response<?> response = new Response<>();
 
         try {
             Appeals appeal = appealsRepository.findById(id).get();
@@ -904,6 +915,7 @@ public class AppealController {
                 response.setCode(ResponseCode.FAILURE);
                 response.setStatus(false);
                 response.setDescription("Appeal Doesnt exist");
+                return response;
             }
 
             List<AppealAmount> appealAmounts = appealAmountRepository.findAppealAmountByAppealId(id);
@@ -917,19 +929,18 @@ public class AppealController {
             response.setCode(ResponseCode.SUCCESS);
             response.setDescription("Appeal No " + appeal.getAppealNo() + " " +
                     appeal.getTax().getTaxName() + " " + appeal.getAppellantName() + "  " +
-                    "Deleted and backUp successful");
+                    "Deleted and backup successful");
 
             DeletedAppeals deletedAppeals = new DeletedAppeals();
             TrabHelper.copyNonNullProperties(appeal, deletedAppeals);
             deletedAppealRepository.save(deletedAppeals);
 
-
             return response;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error deleting appeal", e);
             response.setCode(ResponseCode.FAILURE);
             response.setStatus(false);
-            response.setDescription("Sytem issue you can pefom this now");
+            response.setDescription("System issue, cannot perform this now");
             return response;
         }
     }
@@ -937,7 +948,7 @@ public class AppealController {
 
     @PostMapping(path = "/register-for-retrial", produces = "application/json")
     @ResponseBody
-    public Response registerForRetrial(@RequestBody Map<String, String> req) {
+    public Response registerForRetrial(@RequestBody RetrialDto req) {
         return appealService.registerForRetrial(req);
     }
 
@@ -957,7 +968,7 @@ public class AppealController {
                 response.setDescription("Appeal not found");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error fetching appeal by id: {}", id, e);
             response.setCode(ResponseCode.FAILURE);
             response.setStatus(false);
             response.setDescription("Error occurred while fetching appeal");

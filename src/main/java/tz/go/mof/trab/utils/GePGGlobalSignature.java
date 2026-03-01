@@ -13,6 +13,8 @@ import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 
@@ -22,6 +24,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class GePGGlobalSignature {
+
+	private static final Logger log = LoggerFactory.getLogger(GePGGlobalSignature.class);
 
 	private PrivateKey getPrivateKey(String keyPass, String keyAlias, String keyFilePath) throws Exception {
 
@@ -74,7 +78,7 @@ public class GePGGlobalSignature {
 			sig.update(data);
 			t = sig.verify(db);
 		}catch(Exception e) {
-			e.printStackTrace();
+			log.error("Error verifying signature", e);
 		}
 		return t;
 	}

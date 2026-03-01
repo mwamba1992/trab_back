@@ -25,27 +25,19 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 
 	private static final Logger logger = LoggerFactory.getLogger(RolePermissionServiceImpl.class);
 
-	Response<RolePermissions> response = new Response<RolePermissions>();
-
-	ListResponse<RolePermissions> responseList = new ListResponse<RolePermissions>();
-
-	ListResponse<RolePermissions> listResponse = new ListResponse<RolePermissions>();
-
-	Response<String> responseTxt = new Response<String>();
-
 	@Autowired
 	RolePermissionRepository rolePermissionRepository;
 
 	@Override
 	public Response<RolePermissions> saveRolePermission(RolePermissionsDto rolePermissionDto) {
-
+		Response<RolePermissions> response = new Response<>();
 		try {
 
 			List<PermissionIdModel> permissions = rolePermissionDto.getPermissionList();
 			int successCounter = 0;
 			int duplicateCounter = 0;
 			String message = "";
-			if (permissions.size() > 0) {
+			if (!permissions.isEmpty()) {
 
 				for (PermissionIdModel permissionObj : permissions) {
 
@@ -56,7 +48,7 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 					if (exists.isPresent()) {
 						duplicateCounter++;
 					} else {
-						logger.info(" New permission assigned to role {}: ", permissionId);
+						logger.debug("New permission assigned to role: {}", permissionId);
 
 						RolePermissions rolePermissions = new RolePermissions();
 						rolePermissions.setPermissionId(permissionId);
@@ -77,10 +69,10 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to register role permission with error : {} ", e);
+			logger.error("Failed to register role permission", e);
 			response.setData(null);
 			response.setCode(ResponseCode.FAILURE);
-			response.setDescription(null);
+			response.setDescription("FAILURE");
 			response.setStatus(false);
 
 		}
@@ -90,30 +82,30 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 
 	@Override
 	public ListResponse<RolePermissions> findByRoleId(String roleId) {
-
+		ListResponse<RolePermissions> listResponse = new ListResponse<>();
 		try {
 
 			List<RolePermissions> availableRolePermissions = rolePermissionRepository.findByRoleId(roleId);
 
-			if (availableRolePermissions.size() > 0) {
+			if (!availableRolePermissions.isEmpty()) {
 				listResponse.setCode(ResponseCode.SUCCESS);
-				listResponse.setDescription(null);
-				listResponse.setStatus(false);
+				listResponse.setDescription("SUCCESS");
+				listResponse.setStatus(true);
 				listResponse.setData(availableRolePermissions);
 
 			} else {
 				listResponse.setData(null);
 				listResponse.setCode(ResponseCode.NO_RECORD_FOUND);
 				listResponse.setStatus(false);
-				listResponse.setDescription(null);
+				listResponse.setDescription("No record found");
 
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to retrieve all role permissions with error : {} ", e);
+			logger.error("Failed to retrieve role permissions", e);
 			listResponse.setData(null);
 			listResponse.setCode(ResponseCode.FAILURE);
-			listResponse.setDescription(null);
+			listResponse.setDescription("FAILURE");
 			listResponse.setStatus(false);
 		}
 
@@ -123,29 +115,30 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 
 	@Override
 	public ListResponse<RolePermissions> findByPermissionId(String permissionId) {
+		ListResponse<RolePermissions> listResponse = new ListResponse<>();
 		try {
 
 			List<RolePermissions> availableRolePermissions = rolePermissionRepository.findByPermissionId(permissionId);
 
-			if (availableRolePermissions.size() > 0) {
+			if (!availableRolePermissions.isEmpty()) {
 				listResponse.setCode(ResponseCode.SUCCESS);
-				listResponse.setDescription(null);
-				listResponse.setStatus(false);
+				listResponse.setDescription("SUCCESS");
+				listResponse.setStatus(true);
 				listResponse.setData(availableRolePermissions);
 
 			} else {
 				listResponse.setData(null);
 				listResponse.setCode(ResponseCode.NO_RECORD_FOUND);
 				listResponse.setStatus(false);
-				listResponse.setDescription(null);
+				listResponse.setDescription("No record found");
 
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to retrieve all role permissions with error : {} ", e);
+			logger.error("Failed to retrieve role permissions", e);
 			listResponse.setData(null);
 			listResponse.setCode(ResponseCode.FAILURE);
-			listResponse.setDescription(null);
+			listResponse.setDescription("FAILURE");
 			listResponse.setStatus(false);
 		}
 
@@ -154,30 +147,30 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 
 	@Override
 	public ListResponse<RolePermissions> getAllRolePermissions() {
-
+		ListResponse<RolePermissions> listResponse = new ListResponse<>();
 		try {
 
 			List<RolePermissions> availableRolePermissions = rolePermissionRepository.findAll();
 
-			if (availableRolePermissions.size() > 0) {
+			if (!availableRolePermissions.isEmpty()) {
 				listResponse.setCode(ResponseCode.SUCCESS);
-				listResponse.setDescription(null);
-				listResponse.setStatus(false);
+				listResponse.setDescription("SUCCESS");
+				listResponse.setStatus(true);
 				listResponse.setData(availableRolePermissions);
 
 			} else {
 				listResponse.setData(null);
 				listResponse.setCode(ResponseCode.NO_RECORD_FOUND);
 				listResponse.setStatus(false);
-				listResponse.setDescription(null);
+				listResponse.setDescription("No record found");
 
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to retrieve all role permissions with error : {} ", e);
+			logger.error("Failed to retrieve all role permissions", e);
 			listResponse.setData(null);
 			listResponse.setCode(ResponseCode.FAILURE);
-			listResponse.setDescription(null);
+			listResponse.setDescription("FAILURE");
 			listResponse.setStatus(false);
 		}
 
@@ -187,14 +180,14 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 
 	@Override
 	public Response<String> deleteByPermissionId(String permissionId) {
-
+		Response<String> responseTxt = new Response<>();
 		try {
 
 			List<RolePermissions> permissions = rolePermissionRepository.findByPermissionId(permissionId);
 
-			if (permissions.size() > 0) {
+			if (!permissions.isEmpty()) {
 
-				logger.info(" Delete all permissions with id {}: ", permissionId);
+				logger.debug("Deleting all permissions with id: {}", permissionId);
 
 				rolePermissionRepository.deleteByPermissionId(permissionId);
 				responseTxt.setCode(ResponseCode.SUCCESS);
@@ -211,10 +204,10 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to delete role permission : {} ", e);
+			logger.error("Failed to delete role permission", e);
 			responseTxt.setData(null);
 			responseTxt.setCode(ResponseCode.FAILURE);
-			responseTxt.setDescription(null);
+			responseTxt.setDescription("FAILURE");
 			responseTxt.setStatus(false);
 
 		}
@@ -224,17 +217,18 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 
 	@Override
 	public Response<String> deleteByRoleId(String roleId) {
+		Response<String> responseTxt = new Response<>();
 		try {
 
 			List<RolePermissions> permissions = rolePermissionRepository.findByRoleId(roleId);
 
-			if (permissions.size() > 0) {
+			if (!permissions.isEmpty()) {
 
-				logger.info(" Delete all permissions with id {}: ", roleId);
+				logger.debug("Deleting all permissions for role: {}", roleId);
 
 				rolePermissionRepository.deleteByRoleId(roleId);
 				responseTxt.setCode(ResponseCode.SUCCESS);
-				responseTxt.setDescription("Data was successfull deleted");
+				responseTxt.setDescription("Data was successfully deleted");
 				responseTxt.setStatus(true);
 				responseTxt.setData(null);
 			} else {
@@ -247,10 +241,10 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to delete role permission : {} ", e);
+			logger.error("Failed to delete role permission", e);
 			responseTxt.setData(null);
 			responseTxt.setCode(ResponseCode.FAILURE);
-			responseTxt.setDescription(null);
+			responseTxt.setDescription("FAILURE");
 			responseTxt.setStatus(false);
 
 		}
@@ -260,12 +254,12 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 
 	@Override
 	public Response<String> deleteRolePermission(RolePermissionsDto rolePermissionDto) {
-
+		Response<String> responseTxt = new Response<>();
 		try {
 
 			List<PermissionIdModel> permissions = rolePermissionDto.getPermissionList();
 			int deletedCounter = 0;
-			if (permissions.size() > 0) {
+			if (!permissions.isEmpty()) {
 				for (PermissionIdModel permissionObj : permissions) {
 
 					String permissionId = permissionObj.getPermissionId();
@@ -283,7 +277,7 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 					responseTxt.setData(null);
 					responseTxt.setCode(ResponseCode.SUCCESS);
 					responseTxt.setDescription(deletedCounter + " role permission were deleted");
-					responseTxt.setStatus(false);
+					responseTxt.setStatus(true);
 				} else {
 					responseTxt.setData(null);
 					responseTxt.setCode(ResponseCode.FAILURE);
@@ -294,12 +288,12 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 			} else {
 				responseTxt.setData(null);
 				responseTxt.setCode(ResponseCode.FAILURE);
-				responseTxt.setDescription("Sorry no permission were found");
+				responseTxt.setDescription("No permissions were found");
 				responseTxt.setStatus(false);
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to delete role permission : {} ", e);
+			logger.error("Failed to delete role permission", e);
 			responseTxt.setData(null);
 			responseTxt.setCode(ResponseCode.FAILURE);
 			responseTxt.setDescription(e.getMessage());

@@ -128,8 +128,8 @@ public interface AppealsRepository extends PagingAndSortingRepository<Appeals, L
 	List<Appeals> findHearingAppeals();
 
 
-	@Query(value = "SELECT ap FROM Appeals ap WHERE ap.appealNo like %:region%  AND ap.dateOfFilling  between :startDate AND :endDate  AND ap.decidedDate is not null")
-	List<Appeals> getAppealsForTrat(String region,   @Param("startDate") @DateTimeFormat(pattern = "yyyy-MM-dd") Date startDate, @Param("endDate") @DateTimeFormat(pattern = "yyyy-MM-dd") Date endDate);
+	@Query(value = "SELECT ap FROM Appeals ap WHERE (:region IS NULL OR :region = '' OR ap.appealNo LIKE %:region%) AND (:taxType IS NULL OR :taxType = '' OR ap.tax.id = :taxType) AND ap.dateOfFilling BETWEEN :startDate AND :endDate AND ap.decidedDate IS NOT NULL")
+	List<Appeals> getAppealsForTrat(@Param("region") String region, @Param("taxType") String taxType, @Param("startDate") @DateTimeFormat(pattern = "yyyy-MM-dd") Date startDate, @Param("endDate") @DateTimeFormat(pattern = "yyyy-MM-dd") Date endDate);
 
 	Appeals findByAppealId(Long appealId);
 

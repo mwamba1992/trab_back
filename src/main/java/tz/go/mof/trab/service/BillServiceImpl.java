@@ -110,14 +110,12 @@ public class BillServiceImpl implements BillService {
             }
 
             return response;
-           }
-        catch (Exception e){
-            e.printStackTrace();
+        } catch (Exception e) {
+            logger.error("Error processing bill", e);
             response.setCode(ResponseCode.FAILURE);
-            response.setStatus(true);
+            response.setStatus(false);
             response.setData(null);
-            return  response;
-
+            return response;
         }
     }
 
@@ -129,7 +127,7 @@ public class BillServiceImpl implements BillService {
 
             String responseString;
 
-            logger.info("##### Bill Final Response #####" + globalMethods.beautifyXmlString(requestBody));
+            logger.debug("Bill final response: {}", globalMethods.beautifyXmlString(requestBody));
 
             billResp = (BillRespWrapper) globalMethods.convertStringToXml(JAXBContext.newInstance(BillRespWrapper.class),
                     requestBody);
@@ -146,10 +144,9 @@ public class BillServiceImpl implements BillService {
             responseString = gepgMiddleWare.constructAckToGepg();
 
             return new ResponseEntity<>(responseString, HttpStatus.ACCEPTED);
-        }
-        catch(Exception e ){
-            e.printStackTrace();
-            return  null;
+        } catch (Exception e) {
+            logger.error("Error receiving bill response", e);
+            return null;
         }
     }
 
@@ -189,9 +186,8 @@ public class BillServiceImpl implements BillService {
                 response.setData(null);
                 response.setDescription("No Bill To Cancel Found");
             }
-        }catch (Exception e){
-            e.printStackTrace();
-            logger.error("##########" + e.getMessage());
+        } catch (Exception e) {
+            logger.error("Exception occurred while cancelling bill", e);
             response.setCode(ResponseCode.FAILURE);
             response.setStatus(false);
             response.setData(null);
@@ -203,7 +199,7 @@ public class BillServiceImpl implements BillService {
     @Override
     public List<Bill> searchBills(int page, int size, BillSearchDto billSearchDto) {
 
-        logger.info("#######  Query Params For Bills #######" + billSearchDto);
+        logger.debug("Query params for bills: {}", billSearchDto);
         TrabHelper.print(billSearchDto);
 
 
@@ -293,8 +289,7 @@ public class BillServiceImpl implements BillService {
             sqlQuery = " select * from bill d " + parameter +" AND  d.bill_control_number !='0' ORDER BY  generated_date DESC";
         }
 
-        logger.info("#########" + sqlQuery);
-        System.out.println(sqlQuery);
+        logger.debug("Bill search query: {}", sqlQuery);
 
         Query q = em.createNativeQuery(sqlQuery, Bill.class);
 
@@ -357,7 +352,7 @@ public class BillServiceImpl implements BillService {
     @Override
     public Map<String, String> getBillCount(BillSummaryReportDto billSummaryReportDto, String itemId, boolean isCount) {
 
-        logger.info("#######  Query Params For Bills #######" + billSummaryReportDto);
+        logger.debug("Query params for bill summary: {}", billSummaryReportDto);
 
         List<Map<String, String>> list = new ArrayList<>();
 
@@ -396,7 +391,7 @@ public class BillServiceImpl implements BillService {
             parameter = parameter + " generated_date <=:generated_date ";
         }
 
-        if(parameter.isEmpty() || parameter.equals("")){
+        if(parameter.isEmpty()){
             parameter = parameter + " item_id=:item_id";
 
         }else{
@@ -410,7 +405,7 @@ public class BillServiceImpl implements BillService {
             sqlQuery = " SELECT status,SUM(billed_amount) from bill " + parameter +  " GROUP BY status "  ;
         }
 
-        logger.info("#########" + sqlQuery);
+        logger.debug("SQL query: {}", sqlQuery);
         Query q = em.createNativeQuery(sqlQuery);
 
         if((!billSummaryReportDto.getDateFrom().isEmpty()) && (billSummaryReportDto.getDateFrom())!=null){
@@ -441,7 +436,7 @@ public class BillServiceImpl implements BillService {
 
         Map<String, String> newMap = new HashMap<>();
 
-        if(objects.size()>0) {
+        if (!objects.isEmpty()) {
             objects.forEach(ob -> {
                 Object[] fields = (Object[]) ob;
                 String status = (String) fields[0];
@@ -470,14 +465,14 @@ public class BillServiceImpl implements BillService {
 
 
         gfsList.forEach(group->{
-            logger.info("########### Item ##########" + group.getGfsName() + " item Id: " + group.getGfsCode());
+            logger.debug("Processing item: {} (code: {})", group.getGfsName(), group.getGfsCode());
 
             Map<String, String> map = getBillCount(billSummaryReportDto, group.getGfsCode(), isCount);
 
 
 
             if(isCount) {
-                if (map.size() > 0) {
+                if (!map.isEmpty()) {
 
                     BillSummary billSummary = new BillSummary();
                     billSummary.setItemId(group.getId());
@@ -490,14 +485,10 @@ public class BillServiceImpl implements BillService {
                             Double.parseDouble(map.get("EXPIRED") == null ? "0" : map.get("EXPIRED")) +
                             Double.parseDouble(map.get("PENDING") == null ? "0" : map.get("PENDING")));
                     billSummaries.add(billSummary);
-
-
-                    System.out.println("paid" + billSummaries);
+                    logger.debug("Bill summaries updated: {}", billSummaries.size());
                 }
-            }else {
-
-                if (map.size() > 0) {
-
+            } else {
+                if (!map.isEmpty()) {
                     BillSummary billSummary = new BillSummary();
                     billSummary.setItemId(group.getId());
                     billSummary.setName(group.getGfsName());
@@ -507,11 +498,8 @@ public class BillServiceImpl implements BillService {
                     billSummary.setTotalBillsAmount(new BigDecimal(map.get("PAID") == null ? "0" : map.get("PAID")).add(
                             new BigDecimal(map.get("PENDING") == null ? "0" : map.get("PENDING"))
                     ));
-
                     billSummaries.add(billSummary);
-
-
-                    System.out.println("paid" + billSummaries);
+                    logger.debug("Bill summaries updated: {}", billSummaries.size());
                 }
             }
 
@@ -528,7 +516,7 @@ public class BillServiceImpl implements BillService {
         try {
             List<Bill> bills = billRepository.findBillByResponseCodeNot("7101");
 
-            if (bills.size() > 0) {
+            if (!bills.isEmpty()) {
                 response.setCode(ResponseCode.SUCCESS);
                 response.setStatus(false);
                 response.setData(bills);
@@ -539,11 +527,10 @@ public class BillServiceImpl implements BillService {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("########" + e.getMessage() + "###########");
+            logger.error("Error getting bills with null response code", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("###### Response of Bill Item #####");
+            response.setDescription("Error retrieving bills");
             response.setStatus(false);
         }
         return response;
@@ -557,25 +544,32 @@ public class BillServiceImpl implements BillService {
                 Bill bill = billRepository.findById(req.get("billId")).get();
                 if (gepgMiddleWare.sendRequestToGepg(bill)) {
                     response.setCode(ResponseCode.SUCCESS);
-                    response.setStatus(false);
+                    response.setStatus(true);
                     response.setData(bill);
                 } else {
                     response.setCode(ResponseCode.FAILURE);
-                    response.setStatus(true);
+                    response.setStatus(false);
                     response.setData(null);
                 }
             } else {
                 response.setCode(ResponseCode.NO_RECORD_FOUND);
-                response.setStatus(true);
+                response.setStatus(false);
                 response.setData(null);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error resending bill", e);
             response.setCode(ResponseCode.FAILURE);
-            response.setStatus(true);
-            response.setDescription("Exception occured ");
+            response.setStatus(false);
+            response.setDescription("Exception occurred");
         }
         return response;
+    }
+
+    @Override
+    public Response<Bill> billResend(BillResendDto dto) {
+        Map<String, String> req = new HashMap<>();
+        req.put("billId", dto.getBillId() != null ? dto.getBillId() : "");
+        return billResend(req);
     }
 
 }

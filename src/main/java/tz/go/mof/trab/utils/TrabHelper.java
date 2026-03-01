@@ -6,6 +6,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
@@ -20,18 +22,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 
 public class TrabHelper {
-	
+
+	private static final Logger log = LoggerFactory.getLogger(TrabHelper.class);
+
 	private static final String EMAIL_REGEX = "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])";
 
 	private static final Pattern EMAIL_PATTERN = Pattern.compile(EMAIL_REGEX);
-	
-	public static String findFinancialYear() {		
+
+	public static String findFinancialYear() {
 		int currentYear = Calendar.getInstance().get(Calendar.YEAR);
 		int prevYear = Calendar.getInstance().get(Calendar.YEAR)-1;
 		String currentYearInString = String.valueOf(currentYear);
 		String prevYearInString = String.valueOf(prevYear);
 		String financialYr=prevYearInString+"-"+currentYearInString;
-		
+
 		return financialYr;
 	}
 
@@ -53,23 +57,18 @@ public class TrabHelper {
 		} else {
 			className = obj.getClass().getSimpleName();
 		}
-		System.out.println("--------------------------" + className
-				+ "----------------------------------------------------------");
+		log.debug("--------------------------{}----------------------------------------------------------", className);
 		try {
-			System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj));
+			log.debug("{}", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj));
 		} catch (JsonProcessingException e) {
-			System.out.println("########################ERROR########################");
-			e.printStackTrace();
+			log.error("Error serializing object", e);
 		}
-		System.out.println(
-				"-----------------------------------------------------------------------------------------------------");
+		log.debug("-----------------------------------------------------------------------------------------------------");
 	}
 
 	public static void print(Object obj, String headerMsg) {
 		try {
 			ObjectMapper mapper = new ObjectMapper();
-			System.out.println("");
-			System.out.println("");
 			String className;
 			if (obj == null) {
 				className = "You've passed null object";
@@ -77,22 +76,14 @@ public class TrabHelper {
 				className = obj.getClass().getSimpleName();
 			}
 
-			String msg = "--------------------------" + className + " (" + headerMsg
-					+ ")----------------------------------------------------------";
-
-			System.out.println(msg);
-
-			System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj));
+			log.debug("--------------------------{} ({})----------------------------------------------------------", className, headerMsg);
+			log.debug("{}", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj));
 
 		} catch (Exception e) {
-			System.out.println("########################ERROR########################");
-			e.printStackTrace();
+			log.error("Error serializing object", e);
 		}
 
-		System.out.println(
-				"------------------------------  End of " + headerMsg + " ------------------------------------");
-		System.out.println("");
-		System.out.println("");
+		log.debug("------------------------------  End of {} ------------------------------------", headerMsg);
 	}
 
 	public static String resourceMessage(Object id) {
@@ -104,7 +95,7 @@ public class TrabHelper {
 		TrabHelper.print(objects, "List of parameters");
 
 	}
-	
+
 	 /**
      * Copies properties from one object to another
      * @param source
@@ -123,8 +114,8 @@ public class TrabHelper {
     private static String[] getNullPropertyNames (Object source) {
 	    final BeanWrapper src = new BeanWrapperImpl(source);
 	    java.beans.PropertyDescriptor[] pds = src.getPropertyDescriptors();
- 
-	    Set emptyNames = new HashSet();
+
+	    Set<String> emptyNames = new HashSet<>();
 	    for(java.beans.PropertyDescriptor pd : pds) {
 		//check if value of this property is null then add it to the collection
 	        Object srcValue = src.getPropertyValue(pd.getName());
@@ -133,7 +124,7 @@ public class TrabHelper {
 	    String[] result = new String[emptyNames.size()];
 	    return (String[]) emptyNames.toArray(result);
 	}
-    
+
     public static boolean isNumeric(final String str) {
 
         // null or empty

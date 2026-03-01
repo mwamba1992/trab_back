@@ -73,21 +73,21 @@ public class MigsUtil {
 	 *            is a map of all the incoming hey-value pairs from the VPC
 	 * @return is the hash being returned for comparison to the incoming hash
 	 */
-	public static String SHAhashAllFields(Map fields) {
+	public static String SHAhashAllFields(Map<String, String> fields) {
 
 		// hashKeys = "";
 		// hashValues = "";
 		// create a list and sort it
-		List fieldNames = new ArrayList(fields.keySet());
+		List<String> fieldNames = new ArrayList<>(fields.keySet());
 		Collections.sort(fieldNames);
 
 		// create a buffer for the SHA256 input
 		StringBuilder buf = new StringBuilder();
 
 		// iterate through the list and add the remaining field values
-		Iterator itr = fieldNames.iterator();
+		Iterator<String> itr = fieldNames.iterator();
 		while (itr.hasNext()) {
-			String fieldName = (String) itr.next();
+			String fieldName = itr.next();
 			String fieldValue = (String) fields.get(fieldName);
 			// hashKeys += fieldName + ", ";
 			// if ((fieldValue != null) && (fieldValue.length() > 0)) {
@@ -441,7 +441,7 @@ public class MigsUtil {
 	static String getStatusDescription(String vStatus) {
 
 		String result = "";
-		if (vStatus != null && !vStatus.equals("")) {
+		if (vStatus != null && !vStatus.isEmpty()) {
 
 			if (vStatus.equalsIgnoreCase("Unsupported") || vStatus.equals("No Value Returned")) {
 				result = "3DS not supported or there was no 3DS data provided";
@@ -519,7 +519,7 @@ public class MigsUtil {
 	 * @author Joel M Gaitan
 	 *
 	 */
-	public static String mgisStatusCheck(Map data) throws Exception {
+	public static String mgisStatusCheck(Map<String, Object> data) throws Exception {
 		String vpcQry = "https://migs.mastercard.com.au/vpcdps";
 		// URL u = new URL(vpcQueryDrURL);
 		URL u = new URL(vpcQry);
@@ -553,14 +553,14 @@ public class MigsUtil {
 
 	}
 
-	public static void appendQueryrequestParams(StringBuffer buf, Map requestParams) {
+	public static void appendQueryrequestParams(StringBuffer buf, Map<String, Object> requestParams) {
 		// create a list
-		List fieldNames = new ArrayList(requestParams.keySet());
-		Iterator itr = fieldNames.iterator();
+		List<String> fieldNames = new ArrayList<>(requestParams.keySet());
+		Iterator<String> itr = fieldNames.iterator();
 
 		// move through the list and create a series of URL key/value pairs
 		while (itr.hasNext()) {
-			String fieldName = (String) itr.next();
+			String fieldName = itr.next();
 			String fieldValue = requestParams.get(fieldName).toString();
 
 			if ((fieldValue != null) && (fieldValue.length() > 0)) {

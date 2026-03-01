@@ -27,11 +27,6 @@ public class JudgeServiceImpl implements JudgeService {
 
     private static final Logger logger = LoggerFactory.getLogger(JudgeServiceImpl.class);
 
-
-    Response<Judge> response = new Response<Judge>();
-
-    ListResponse<Judge> responseList = new ListResponse<Judge>();
-
     @Autowired
     private JudgeRepository judgeRepository;
 
@@ -42,9 +37,10 @@ public class JudgeServiceImpl implements JudgeService {
 
     @Override
     public ListResponse<Judge> findAllJudges() {
+        ListResponse<Judge> responseList = new ListResponse<>();
         logger.info(loggedUser.getInfo().toString());
         List<Judge> gfsList = judgeRepository.findByActiveTrue();
-        if (gfsList.size() < 1) {
+        if (gfsList.isEmpty()) {
             responseList.setCode(ResponseCode.NO_RECORD_FOUND);
             responseList.setStatus(false);
             responseList.setData(null);
@@ -59,9 +55,9 @@ public class JudgeServiceImpl implements JudgeService {
 
     @Override
     public Response<Judge> getOneJudge(String gsfId) {
-        judgeRepository.findById(gsfId).get();
-        response.setCode(ResponseCode.SUCCESS);
+        Response<Judge> response = new Response<>();
         response.setData(judgeRepository.findById(gsfId).get());
+        response.setCode(ResponseCode.SUCCESS);
         response.setDescription("SUCCESS");
         response.setStatus(true);
         return response;
@@ -69,12 +65,12 @@ public class JudgeServiceImpl implements JudgeService {
 
     @Override
     public Response<Judge> saveJudge(JudgeDto judgeDto) {
+        Response<Judge> response = new Response<>();
         try {
             if (judgeRepository.findByName(judgeDto.getName()) == null) {
                 Judge judge = new Judge();
                 TrabHelper.copyNonNullProperties(judgeDto, judge);
 
-                response.setCode(ResponseCode.SUCCESS);
                 judge.setCreatedBy(loggedUser.getInfo().getName());
                 response.setData(judgeRepository.save(judge));
                 response.setCode(ResponseCode.SUCCESS);
@@ -83,12 +79,12 @@ public class JudgeServiceImpl implements JudgeService {
             } else {
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Gfs Code Already Exists");
+                response.setDescription("Judge already exists");
                 response.setStatus(false);
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error saving judge", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
             response.setDescription("FAILURE");
@@ -100,9 +96,10 @@ public class JudgeServiceImpl implements JudgeService {
 
     @Override
     public Response<Judge> editJudge(JudgeDto judgeDto, String gsfId) {
+        Response<Judge> response = new Response<>();
         try {
-            if (judgeRepository.findById(gsfId).get() != null) {
-                Judge  judge = judgeRepository.findById(gsfId).get();
+            Judge judge = judgeRepository.findById(gsfId).orElse(null);
+            if (judge != null) {
                 TrabHelper.copyNonNullProperties(judgeDto, judge);
 
                 judge.setUpdatedAt(LocalDateTime.now());
@@ -115,14 +112,14 @@ public class JudgeServiceImpl implements JudgeService {
             } else {
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Error! Updating Currency");
+                response.setDescription("Error updating judge");
                 response.setStatus(false);
             }
 
         } catch (Exception e) {
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Not Found");
+            response.setDescription("Judge not found");
             response.setStatus(false);
         }
         return response;
@@ -130,6 +127,7 @@ public class JudgeServiceImpl implements JudgeService {
 
     @Override
     public Response<Judge> deleteJudge(String gsfId) {
+        Response<Judge> response = new Response<>();
         try {
             Judge judge = judgeRepository.findById(gsfId).get();
             judge.setDeleted(true);
@@ -144,10 +142,10 @@ public class JudgeServiceImpl implements JudgeService {
             response.setStatus(true);
 
         }catch (Exception e){
-            logger.error("#########"+ e.getMessage() + "############");
+            logger.error("Error deleting judge", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Could Not be Deleted");
+            response.setDescription("Judge could not be deleted");
             response.setStatus(false);
         }
 

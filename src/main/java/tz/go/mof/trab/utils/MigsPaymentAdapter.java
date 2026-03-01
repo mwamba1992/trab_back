@@ -91,15 +91,15 @@ public class MigsPaymentAdapter {
 		hashValues = "";
 
 		// create a list and sort it
-		List fieldNames = new ArrayList(fields.keySet());
+		List<String> fieldNames = new ArrayList<>(fields.keySet());
 		Collections.sort(fieldNames);
 		// create a buffer for the SHA256 input
 		StringBuilder buf = new StringBuilder();
 
 		// iterate through the list and add the remaining field values
-		Iterator itr = fieldNames.iterator();
+		Iterator<String> itr = fieldNames.iterator();
 		while (itr.hasNext()) {
-			String fieldName = (String) itr.next();
+			String fieldName = itr.next();
 			String fieldValue = fields.get(fieldName).toString();
 			hashKeys += fieldName + ", ";
 			if ((fieldValue != null) && (fieldValue.length() >= 0)) {
@@ -112,7 +112,7 @@ public class MigsPaymentAdapter {
 		  
 		}
 	
-	System.out.println("value after sorting: " + buf.toString());
+	epayLog.debug("value after sorting: " + buf.toString());
 	
 		byte[] mac = null;
 		try {

@@ -28,10 +28,6 @@ public class CurrencyServiceImpl implements CurrencyService {
 
     private static final Logger logger = LoggerFactory.getLogger(CurrencyServiceImpl.class);
 
-    Response<Currency> response = new Response<Currency>();
-
-    ListResponse<Currency> responseList = new ListResponse<Currency>();
-
     @Autowired
     private CurrencyRepository currencyRepository;
 
@@ -43,8 +39,9 @@ public class CurrencyServiceImpl implements CurrencyService {
 
     @Override
     public ListResponse<Currency> findAllCurrency(Boolean active, Boolean deleted) {
+        ListResponse<Currency> responseList = new ListResponse<>();
         List<Currency> currencyList = currencyRepository.findByActiveAndDeleted(active, deleted);
-        if (currencyList.size() < 1) {
+        if (currencyList.isEmpty()) {
             responseList.setCode(ResponseCode.NO_RECORD_FOUND);
             responseList.setStatus(false);
             responseList.setData(null);
@@ -59,9 +56,11 @@ public class CurrencyServiceImpl implements CurrencyService {
 
     @Override
     public Response<Currency> getOneCurrency(String currencyId) {
-        if (currencyRepository.findById(currencyId).get() != null) {
+        Response<Currency> response = new Response<>();
+        Currency currency = currencyRepository.findById(currencyId).orElse(null);
+        if (currency != null) {
             response.setCode(ResponseCode.SUCCESS);
-            response.setData(currencyRepository.findById(currencyId).get());
+            response.setData(currency);
             response.setDescription("SUCCESS");
             response.setStatus(true);
         } else {
@@ -74,13 +73,13 @@ public class CurrencyServiceImpl implements CurrencyService {
 
     @Override
     public Response<Currency> saveCurrency(CurrencyDto currencyDto) {
+        Response<Currency> response = new Response<>();
         try {
             if (currencyRepository.findByCurrencyShortNameAndActiveAndDeleted(currencyDto.getCurrencyShortName(),
                     true, false) == null) {
                 Currency currency = new Currency();
                 TrabHelper.copyNonNullProperties(currencyDto, currency);
 
-                response.setCode(ResponseCode.SUCCESS);
                 currency.setCreatedBy(loggedUser.getInfo().getName());
                 response.setCode(ResponseCode.SUCCESS);
                 response.setData(currencyRepository.save(currency));
@@ -94,7 +93,7 @@ public class CurrencyServiceImpl implements CurrencyService {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error saving currency", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
             response.setDescription("FAILURE");
@@ -106,10 +105,10 @@ public class CurrencyServiceImpl implements CurrencyService {
 
     @Override
     public Response<Currency> editCurrency(CurrencyDto currencyDto, String currencyId) {
-
+        Response<Currency> response = new Response<>();
         try {
-            if (currencyRepository.findById(currencyId).get() != null) {
-                Currency currency = currencyRepository.findById(currencyId).get();
+            Currency currency = currencyRepository.findById(currencyId).orElse(null);
+            if (currency != null) {
                 TrabHelper.copyNonNullProperties(currencyDto, currency);
 
                 currency.setUpdatedAt(LocalDateTime.now());
@@ -137,6 +136,7 @@ public class CurrencyServiceImpl implements CurrencyService {
 
     @Override
     public Response<Currency> deleteCurrency(String currencyId) {
+        Response<Currency> response = new Response<>();
         try {
             Currency currency = currencyRepository.findById(currencyId).get();
             currency.setDeleted(true);
@@ -151,7 +151,7 @@ public class CurrencyServiceImpl implements CurrencyService {
             response.setStatus(true);
 
         }catch (Exception e){
-            logger.error("########" + e.getMessage() + "###########");
+            logger.error("Error deleting currency", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
             response.setDescription("Currency! Could Not be Deleted");
@@ -172,7 +172,7 @@ public class CurrencyServiceImpl implements CurrencyService {
                 return  null;
             }
         }catch (Exception e){
-           e.printStackTrace();
+           logger.error("Error finding currency by short name", e);
            return  null;
         }
     }

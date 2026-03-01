@@ -89,7 +89,7 @@ public class SummonsServiceImpl implements  SummonsService{
         summons.setJudge(judge.getName());
         summonsRepository.save(summons);
 
-        return new Response(true, ResponseCode.SUCCESS, "Success", null);
+        return new Response<>(true, ResponseCode.SUCCESS, "Success", null);
     }
 
 }

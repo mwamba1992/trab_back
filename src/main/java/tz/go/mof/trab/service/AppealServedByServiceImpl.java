@@ -22,10 +22,6 @@ public class AppealServedByServiceImpl implements AppealServedByService{
 
     private static final Logger logger = LoggerFactory.getLogger(AppealServedByServiceImpl.class);
 
-    Response<AppealServedBy> response = new Response<AppealServedBy>();
-
-    ListResponse<AppealServedBy> responseList = new ListResponse<AppealServedBy>();
-
     @Autowired
     private AppealServedByRepository appealServedByRepository;
 
@@ -43,8 +39,9 @@ public class AppealServedByServiceImpl implements AppealServedByService{
 
     @Override
     public ListResponse<AppealServedBy> findAllAppealServedBy() {
+        ListResponse<AppealServedBy> responseList = new ListResponse<>();
         List<AppealServedBy> appealServedByList = (List<AppealServedBy>) appealServedByRepository.findAll();
-        if (appealServedByList.size() < 1) {
+        if (appealServedByList.isEmpty()) {
             responseList.setCode(ResponseCode.NO_RECORD_FOUND);
             responseList.setStatus(false);
             responseList.setData(null);
@@ -59,9 +56,9 @@ public class AppealServedByServiceImpl implements AppealServedByService{
 
     @Override
     public Response<AppealServedBy> getOneAppealServedBy(String servedById) {
-        appealServedByRepository.findById(servedById).get();
-        response.setCode(ResponseCode.SUCCESS);
+        Response<AppealServedBy> response = new Response<>();
         response.setData(appealServedByRepository.findById(servedById).get());
+        response.setCode(ResponseCode.SUCCESS);
         response.setDescription("SUCCESS");
         response.setStatus(true);
         return response;
@@ -69,14 +66,14 @@ public class AppealServedByServiceImpl implements AppealServedByService{
 
     @Override
     public Response<AppealServedBy> saveAppealServedBy(AppealServedByDto appealServedByDto) {
-        logger.info("########## Req ##########" + appealServedByDto);
+        Response<AppealServedBy> response = new Response<>();
+        logger.debug("Saving appeal served by: {}", appealServedByDto);
 
         try {
 
                 AppealServedBy appealServedBy = new AppealServedBy();
                 TrabHelper.copyNonNullProperties(appealServedByDto, appealServedBy);
 
-                response.setCode(ResponseCode.SUCCESS);
                 appealServedBy.setCreatedBy(loggedUser.getInfo().getId());
                 response.setData(appealServedByRepository.save(appealServedBy));
                 response.setCode(ResponseCode.SUCCESS);
@@ -85,7 +82,7 @@ public class AppealServedByServiceImpl implements AppealServedByService{
 
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error saving appeal served by", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
             response.setDescription("FAILURE");
@@ -97,10 +94,11 @@ public class AppealServedByServiceImpl implements AppealServedByService{
 
     @Override
     public Response<AppealServedBy> editAppealServedBy(AppealServedByDto appealServedByDto, String servedBy) {
+        Response<AppealServedBy> response = new Response<>();
         try {
-            if (appealServedByRepository.findById(servedBy).get() != null) {
-                AppealServedBy appealServedBy = appealServedByRepository.findById(servedBy).get();
-                TrabHelper.copyNonNullProperties(appealServedByRepository, appealServedBy);
+            AppealServedBy appealServedBy = appealServedByRepository.findById(servedBy).orElse(null);
+            if (appealServedBy != null) {
+                TrabHelper.copyNonNullProperties(appealServedByDto, appealServedBy);
 
                 appealServedBy.setUpdatedAt(LocalDateTime.now());
                 appealServedBy.setUpdatedBy(loggedUser.getInfo().getId());
@@ -112,14 +110,14 @@ public class AppealServedByServiceImpl implements AppealServedByService{
             } else {
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Error! Updating Currency");
+                response.setDescription("Error updating appeal served by");
                 response.setStatus(false);
             }
 
         } catch (Exception e) {
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Not Found");
+            response.setDescription("Appeal served by not found");
             response.setStatus(false);
         }
         return response;
@@ -127,6 +125,7 @@ public class AppealServedByServiceImpl implements AppealServedByService{
 
     @Override
     public Response<AppealServedBy> deleteAppealServedBy(String feeId) {
+        Response<AppealServedBy> response = new Response<>();
         try {
             AppealServedBy appealServedBy = appealServedByRepository.findById(feeId).get();
             appealServedBy.setDeleted(true);
@@ -141,10 +140,10 @@ public class AppealServedByServiceImpl implements AppealServedByService{
             response.setStatus(true);
 
         }catch (Exception e){
-            logger.error("########" + e.getMessage() + "###########");
+            logger.error("Error deleting appeal served by", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Revenue! Could Not be Deleted");
+            response.setDescription("Appeal served by could not be deleted");
             response.setStatus(false);
         }
 

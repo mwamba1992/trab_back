@@ -138,7 +138,7 @@ public class BillController {
     @RequestMapping(value = "/api/bill-resend-bill", method = RequestMethod.POST,
             produces = "application/json")
     @ResponseBody
-    public Response<Bill> resendBill(@RequestBody Map<String, String> req) {
+    public Response<Bill> resendBill(@RequestBody BillResendDto req) {
         return billService.billResend(req);
     }
 

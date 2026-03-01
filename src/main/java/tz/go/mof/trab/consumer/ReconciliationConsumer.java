@@ -98,9 +98,8 @@ public class ReconciliationConsumer {
             fileUploadService.save(uploadedFile);
 
 
-            File FileName = new File(".");
             String pspTempFilePathCsv = FILE_UPLOADED_PATH +
-                    uploadedFile.getFileId() + "_report" + "." + "csv";
+                    uploadedFile.getFileId() + "_report.csv";
             File file = new File(pspTempFilePathCsv);
             Writer writer = new FileWriter(file, true);
 
@@ -108,7 +107,7 @@ public class ReconciliationConsumer {
             globalMethods.csvWriterReconFile(writer, pspReconFileDtoCsv);
             logger.info("#######  file created successful ######");
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error processing reconciliation file", e);
         }
     }
 
@@ -135,8 +134,7 @@ public class ReconciliationConsumer {
                             pspReceipt, new BigDecimal(amount));
 
                 } catch (Exception e) {
-                    e.printStackTrace();
-                    logger.error("#####################" + e.getMessage());
+                    logger.error("Error finding payment transaction", e);
                     exception = true;
                     payment = null;
                 }
@@ -168,6 +166,6 @@ public class ReconciliationConsumer {
         logger.info("id: " + mappingHeader.get("id") + " Unreconciled: " + reconciledCounter);
         mappingHeader.put("reconciledCount", String.valueOf(reconciledCounter));
         globalMethods.publishToExchangeWithHeaders(reconOutExchange, reconOutRoutingKey, readable, mappingHeader);
-        System.out.println("##################" + readable);
+        logger.debug("Reconciliation data: {}", readable);
     }
 }

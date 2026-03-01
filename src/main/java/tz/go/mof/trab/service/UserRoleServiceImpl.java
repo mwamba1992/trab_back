@@ -30,14 +30,6 @@ public class UserRoleServiceImpl implements UserRoleService {
 
 	private static final Logger logger = LoggerFactory.getLogger(UserRoleServiceImpl.class);
 
-	Response<UserRole> response = new Response<UserRole>();
-
-	ListResponse<UserRole> responseList = new ListResponse<UserRole>();
-
-	ListResponse<UserRole> listResponse = new ListResponse<UserRole>();
-
-	Response<String> responseTxt = new Response<String>();
-
 	@Autowired
 	UserRoleRepository userRoleRepository;
 
@@ -49,13 +41,13 @@ public class UserRoleServiceImpl implements UserRoleService {
 
 	@Override
 	public Response<UserRole> saveUserRole(UserRoleDto userRoleDto) {
-
-		logger.info("######" + userRoleDto.toString());
+		Response<UserRole> response = new Response<>();
+		logger.debug("Saving user role: {}", userRoleDto);
 
 		try {
 			Boolean flag = true;
 
-			List<RoleIdModel> roleList = new ArrayList<RoleIdModel>();
+			List<RoleIdModel> roleList = new ArrayList<>();
 
 			RoleIdModel roleIdModel = new RoleIdModel();
 			roleIdModel.setRoleId(userRoleDto.getRoleId());
@@ -64,7 +56,7 @@ public class UserRoleServiceImpl implements UserRoleService {
 			int successCounter = 0;
 			int duplicateCounter = 0;
 			String message = "";
-			if (roleList.size() > 0) {
+			if (!roleList.isEmpty()) {
 
 				for (RoleIdModel roleObj : roleList) {
 
@@ -75,7 +67,7 @@ public class UserRoleServiceImpl implements UserRoleService {
 
 					Optional<SystemUser> users = userRepository.findById(userRoleDto.getUserId());
 
-					if (exists.isPresent() == true) {
+					if (exists.isPresent()) {
 						response.setData(null);
 						response.setCode(ResponseCode.DUPLICATE);
 						response.setDescription("User role already exists");
@@ -141,11 +133,12 @@ public class UserRoleServiceImpl implements UserRoleService {
 
 	@Override
 	public ListResponse<UserRole> findByRoleId(String roleId) {
+		ListResponse<UserRole> listResponse = new ListResponse<>();
 		try {
 
 			List<UserRole> availableUserRole = userRoleRepository.findByRoleId(roleId);
 
-			if (availableUserRole.size() > 0) {
+			if (!availableUserRole.isEmpty()) {
 				listResponse.setCode(ResponseCode.SUCCESS);
 				listResponse.setDescription("User role");
 				listResponse.setStatus(true);
@@ -172,11 +165,12 @@ public class UserRoleServiceImpl implements UserRoleService {
 
 	@Override
 	public ListResponse<UserRole> findByUserId(String userId) {
+		ListResponse<UserRole> listResponse = new ListResponse<>();
 		try {
 
 			List<UserRole> availableUserRole = userRoleRepository.findByUserId(userId);
 
-			if (availableUserRole.size() > 0) {
+			if (!availableUserRole.isEmpty()) {
 				listResponse.setCode(ResponseCode.SUCCESS);
 				listResponse.setDescription("User role");
 				listResponse.setStatus(true);
@@ -203,12 +197,12 @@ public class UserRoleServiceImpl implements UserRoleService {
 
 	@Override
 	public Response<String> deleteByUserId(String userId) {
-
+		Response<String> responseTxt = new Response<>();
 		try {
 
 			List<UserRole> availableUserRole = userRoleRepository.findByUserId(userId);
 
-			if (availableUserRole.size() > 0) {
+			if (!availableUserRole.isEmpty()) {
 
 				userRoleRepository.deleteByUserId(userId);
 
@@ -238,12 +232,12 @@ public class UserRoleServiceImpl implements UserRoleService {
 
 	@Override
 	public Response<String> deleteByRoleId(String roleId) {
-
+		Response<String> responseTxt = new Response<>();
 		try {
 
 			List<UserRole> availableUserRole = userRoleRepository.findByRoleId(roleId);
 
-			if (availableUserRole.size() > 0) {
+			if (!availableUserRole.isEmpty()) {
 
 				userRoleRepository.deleteByRoleId(roleId);
 				responseTxt.setCode(ResponseCode.SUCCESS);
@@ -272,11 +266,12 @@ public class UserRoleServiceImpl implements UserRoleService {
 
 	@Override
 	public ListResponse<UserRole> getAllUserRoles() {
+		ListResponse<UserRole> listResponse = new ListResponse<>();
 		try {
 
 			List<UserRole> availableUserRole = userRoleRepository.findAll();
 
-			if (availableUserRole.size() > 0) {
+			if (!availableUserRole.isEmpty()) {
 				listResponse.setCode(ResponseCode.SUCCESS);
 				listResponse.setDescription(null);
 				listResponse.setStatus(false);
@@ -303,11 +298,12 @@ public class UserRoleServiceImpl implements UserRoleService {
 
 	@Override
 	public Response<String> revokeRoleFromUser(String userId, String roleId) {
+		Response<String> responseTxt = new Response<>();
 		try {
 
 			List<UserRole> availableUserRole = userRoleRepository.findByUserIdAndRoleId(userId, roleId);
 
-			if (availableUserRole.size() > 0) {
+			if (!availableUserRole.isEmpty()) {
 
 				userRoleRepository.deleteByUserIdAndRoleId(userId, roleId);
 				responseTxt.setCode(ResponseCode.SUCCESS);

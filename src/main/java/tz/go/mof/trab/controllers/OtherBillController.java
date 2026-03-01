@@ -35,7 +35,7 @@ public class OtherBillController {
     public Response<BillDto> createBill(@Valid @RequestBody PortalBillRequestDto billRequestDto) {
 
         logger.info("#### Request from portal ####" + billRequestDto);
-        System.out.println("### request for bills ####");
+        logger.debug("### request for bills ####");
         TrabHelper.print(billRequestDto);
         return billService.createBill(billRequestDto, false);
 

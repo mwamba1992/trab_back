@@ -93,10 +93,7 @@ public class LoggedUserImpl implements LoggedUser {
                 }
 
             } catch (Exception e) {
-                logger.error("----------------Error has occured on authentication facade" + e.getMessage()
-                        + "----------------------");
-
-                e.printStackTrace();
+                logger.error("Error has occurred on authentication facade", e);
 
             }
 

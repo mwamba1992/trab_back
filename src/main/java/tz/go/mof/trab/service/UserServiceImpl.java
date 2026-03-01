@@ -58,7 +58,7 @@ public class UserServiceImpl implements UserService {
 
 				TrabHelper.print(user);
 
-				if ((optCheckNumber.size() > 0) && (user.getCheckNumber() != null)) {
+				if (!optCheckNumber.isEmpty() && user.getCheckNumber() != null) {
 
 					logger.info(" Check Number already exists ");
 
@@ -115,7 +115,7 @@ public class UserServiceImpl implements UserService {
 
 
 					} catch (Exception e) {
-						e.printStackTrace();
+						logger.error("Error sending credentials to user", e);
 					}
 					
 					logger.info(" Registering user with Details {}: ", savedUser);
@@ -168,7 +168,6 @@ public class UserServiceImpl implements UserService {
 			}
 
 		} catch (Exception e) {
-			// TODO: handle exception
 			logger.error("Failed to retrieve user by agent code with error : {} ", e);
 			response.setData(null);
 			response.setCode(ResponseCode.FAILURE);
@@ -181,13 +180,11 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public Response<SystemUser> deleteUser(String userId) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public Response<SystemUser> updateUser(UserDto userDto) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -199,7 +196,7 @@ public class UserServiceImpl implements UserService {
 
 			List<SystemUser> availableUsers = userRepository.findAll();
 
-			if (availableUsers.size() > 0) {
+			if (!availableUsers.isEmpty()) {
 				List<tz.go.mof.trab.dto.user.UserResponseDto> userResponseDtos = new java.util.ArrayList<>();
 				for (SystemUser user : availableUsers) {
 					userResponseDtos.add(convertToUserResponseDto(user));
@@ -276,7 +273,6 @@ public class UserServiceImpl implements UserService {
 			}
 
 		} catch (Exception e) {
-			// TODO: handle exception
 			logger.error("Failed to update  applicant by user Id with error : {} ", e);
 			response.setData(null);
 			response.setCode(ResponseCode.FAILURE);
@@ -303,7 +299,6 @@ public class UserServiceImpl implements UserService {
 			}
 
 		} catch (Exception e) {
-			// TODO: handle exception
 			logger.error("Failed to retrieve user by user id with error : {} ", e);
 			response.setData(null);
 			response.setCode(ResponseCode.FAILURE);
@@ -411,9 +406,9 @@ public class UserServiceImpl implements UserService {
 				  // sending email for  password
 
 				} catch (Exception e) {
-					e.printStackTrace();
+					logger.error("Error sending password reset email", e);
 				}
-				
+
 
 			} else {
 				responseTxt.setData(null);
@@ -423,7 +418,6 @@ public class UserServiceImpl implements UserService {
 			}
 
 		} catch (Exception e) {
-			// TODO: handle exception
 			logger.error("Failed to retrieve user by user id with error : {} ", e);
 			responseTxt.setData(null);
 			responseTxt.setCode(ResponseCode.FAILURE);
@@ -441,7 +435,7 @@ public class UserServiceImpl implements UserService {
 
 			List<SystemUser> availableUsers = userRepository.findByEnabled(false);
 
-			if (availableUsers.size() > 0) {
+			if (!availableUsers.isEmpty()) {
 				listResponse.setData(availableUsers);
 				listResponse.setCode(ResponseCode.SUCCESS);
 				listResponse.setStatus(true);

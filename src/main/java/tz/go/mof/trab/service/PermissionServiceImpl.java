@@ -24,18 +24,12 @@ public class PermissionServiceImpl implements PermissionService {
 
 	private static final Logger logger = LoggerFactory.getLogger(PermissionServiceImpl.class);
 
-	Response<Permission> response = new Response<Permission>();
-
-	ListResponse<Permission> responseList = new ListResponse<Permission>();
-
-	ListResponse<Permission> listResponse = new ListResponse<Permission>();
-
 	@Autowired
 	PermissionRepository permissionRepository;
 
 	@Override
 	public Response<Permission> savePermission(PermissionDto permissionDto) {
-
+		Response<Permission> response = new Response<>();
 		try {
 			Permission permission = new Permission();
 
@@ -45,26 +39,26 @@ public class PermissionServiceImpl implements PermissionService {
 
 			Optional<Permission> optPermissionName = permissionRepository.findByName(permissionDto.getName());
 
-			if (optPermissionName.isPresent() == true) {
+			if (optPermissionName.isPresent()) {
 				response.setData(null);
 				response.setCode(ResponseCode.DUPLICATE);
 				response.setDescription("Permission name already exists");
 				response.setStatus(false);
 			} else {
-				logger.info(" Registerring role with Details {}: ", permission);
+				logger.debug("Registering permission: {}", permission);
 				Permission savedPermission = permissionRepository.save(permission);
 				response.setData(savedPermission);
 				response.setCode(ResponseCode.SUCCESS);
-				response.setDescription(null);
+				response.setDescription("SUCCESS");
 				response.setStatus(true);
 
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to register permission with error : {} ", e);
+			logger.error("Failed to register permission", e);
 			response.setData(null);
 			response.setCode(ResponseCode.FAILURE);
-			response.setDescription(null);
+			response.setDescription("FAILURE");
 			response.setStatus(false);
 
 		}
@@ -75,12 +69,12 @@ public class PermissionServiceImpl implements PermissionService {
 
 	@Override
 	public Response<Permission> findByName(String name) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public Response<Permission> findByPermissionId(String permissionId) {
+		Response<Permission> response = new Response<>();
 		try {
 
 			Optional<Permission> permission = permissionRepository.findById(permissionId);
@@ -89,7 +83,7 @@ public class PermissionServiceImpl implements PermissionService {
 				response.setData(permission.get());
 				response.setCode(ResponseCode.SUCCESS);
 				response.setDescription("Permission Details");
-				response.setStatus(false);
+				response.setStatus(true);
 			} else {
 				response.setData(null);
 				response.setCode(ResponseCode.NO_RECORD_FOUND);
@@ -98,7 +92,7 @@ public class PermissionServiceImpl implements PermissionService {
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to retrieve permission details with error : ", e);
+			logger.error("Failed to retrieve permission details", e);
 			response.setData(null);
 			response.setCode(ResponseCode.FAILURE);
 			response.setDescription("Failed to retrieve permission details");
@@ -110,26 +104,25 @@ public class PermissionServiceImpl implements PermissionService {
 
 	@Override
 	public Response<Permission> updatePermission(PermissionDto permissionDto) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public Response<Permission> deletePermission(String permissionId) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public ListResponse<Permission> getAllPermissions() {
+		ListResponse<Permission> listResponse = new ListResponse<>();
 		try {
 
 			List<Permission> availablePermissions = permissionRepository.findAll();
 
-			if (availablePermissions.size() > 0) {
+			if (!availablePermissions.isEmpty()) {
 				listResponse.setData(availablePermissions);
 				listResponse.setCode(ResponseCode.SUCCESS);
-				listResponse.setStatus(false);
+				listResponse.setStatus(true);
 			} else {
 				listResponse.setData(null);
 				listResponse.setCode(ResponseCode.NO_RECORD_FOUND);
@@ -137,7 +130,7 @@ public class PermissionServiceImpl implements PermissionService {
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to retrieve all role permissions with error : {} ", e);
+			logger.error("Failed to retrieve all permissions", e);
 			listResponse.setData(null);
 			listResponse.setCode(ResponseCode.FAILURE);
 			listResponse.setStatus(false);

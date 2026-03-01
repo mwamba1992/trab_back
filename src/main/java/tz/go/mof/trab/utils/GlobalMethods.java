@@ -24,6 +24,7 @@ import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.log4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -47,12 +48,20 @@ import org.xml.sax.InputSource;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
+import tz.go.mof.trab.dto.appeal.CreateAppealDto;
+import tz.go.mof.trab.dto.appeal.EditAppealDto;
+import tz.go.mof.trab.dto.summon.CreateSummonDto;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import tz.go.mof.trab.config.userextractor.LoggedUser;
 import tz.go.mof.trab.dto.bill.PortalBillRequestDto;
+import tz.go.mof.trab.dto.report.AppealFilterDto;
+import tz.go.mof.trab.dto.report.ApplicationFilterDto;
+import tz.go.mof.trab.dto.report.BillDynamicDto;
 import tz.go.mof.trab.dto.report.BillReportDto;
+import tz.go.mof.trab.dto.report.DateRangeDto;
+import tz.go.mof.trab.dto.report.NoticeFilterDto;
 import tz.go.mof.trab.dto.report.PaymentReportDto;
 import tz.go.mof.trab.dto.report.QrCodeDto;
 import tz.go.mof.trab.dto.report.SummonDto;
@@ -67,6 +76,7 @@ import tz.go.mof.trab.service.*;
 @Component
 public class GlobalMethods {
 
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(GlobalMethods.class);
 
     @Autowired
     private ExcelFileCreator excelFileCreator;
@@ -239,7 +249,7 @@ public class GlobalMethods {
 
             statusCode = externalconnnection.getResponseCode();
 
-            System.out.println("Status code is: " + statusCode);
+            log.debug("External system response status code: {}", statusCode);
 
             if ((statusCode == HttpURLConnection.HTTP_OK || statusCode == HttpURLConnection.HTTP_CREATED
                     || statusCode == HttpURLConnection.HTTP_ACCEPTED)) {
@@ -268,7 +278,7 @@ public class GlobalMethods {
             }
 
         } catch (Exception e) {
-            System.out.println("Status code :" + statusCode + " \n Error: " + e);
+            log.error("External system connection failed - Status code: {}", statusCode, e);
             throw e;
 
         } finally {
@@ -388,12 +398,11 @@ public class GlobalMethods {
     public String getStringWithinXmlTag(String xmlBody, String xmlTag) {
         String xmlString = "";
         if (xmlBody != null && !xmlBody.isEmpty() && xmlTag != null && !xmlTag.isEmpty()) {
-
             try {
                 xmlString = xmlBody.substring(xmlBody.indexOf("<" + xmlTag + ">"),
                         xmlBody.indexOf("</" + xmlTag + ">") + xmlTag.length() + 3);
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("Error extracting XML tag: {}", xmlTag, e);
             }
         }
         return xmlString;
@@ -408,7 +417,7 @@ public class GlobalMethods {
             key = sha.digest(key);
             key = Arrays.copyOf(key, 16);
         } catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
-            e.printStackTrace();
+            log.error("Error setting encryption key", e);
         }
     }
 
@@ -475,11 +484,18 @@ public class GlobalMethods {
         return q.getResultList();
     }
 
+    public List<Bill> findBills(BillDynamicDto dto) {
+        Map<String, String> criteria = new HashMap<>();
+        criteria.put("status", dto.getStatus() != null ? dto.getStatus() : "");
+        criteria.put("startDate", dto.getStartDate() != null ? dto.getStartDate() : "");
+        criteria.put("endDate", dto.getEndDate() != null ? dto.getEndDate() : "");
+        return findBills(criteria);
+    }
 
     public List<Bill> findBills(Map<String, String> criteria) {
 
         String parameter = "";
-        String sqlQuery = "";
+        String sqlQuery;
         String joiner = " AND";
 
 
@@ -494,13 +510,12 @@ public class GlobalMethods {
         String endDate = criteria.get("endDate").split("T")[0];
 
         parameter = " where " + parameter;
-        sqlQuery = " select * from bill d " + parameter + " AND (d.generated_date BETWEEN " + "\"" + startDate + "\""
-                + " AND " + "\"" + endDate + "\"" + ")";
-
-        System.out.println("#### from querying bills #####");
-        System.out.println(sqlQuery);
+        sqlQuery = " select * from bill d " + parameter + " AND (d.generated_date BETWEEN :startDate AND :endDate)";
 
         Query q = em.createNativeQuery(sqlQuery, Bill.class);
+
+        q.setParameter("startDate", startDate);
+        q.setParameter("endDate", endDate);
 
         if ((!criteria.get("status").isEmpty()) && (criteria.get("status")) != null) {
             if (criteria.get("status").equals("PAID")) {
@@ -511,7 +526,6 @@ public class GlobalMethods {
             }
         }
 
-        System.out.println(q.getResultList());
         return q.getResultList();
     }
 
@@ -630,6 +644,21 @@ public class GlobalMethods {
         return reportDto;
     }
 
+    public List<ApplicationRegister> getApplications(ApplicationFilterDto dto) {
+        Map<String, String> criterial = new HashMap<>();
+        criterial.put("hearing", dto.getHearing() != null ? dto.getHearing() : "");
+        criterial.put("tax", dto.getTax() != null ? dto.getTax() : "");
+        criterial.put("region", dto.getRegion() != null ? dto.getRegion() : "");
+        criterial.put("applicationTrendType", dto.getApplicationTrendType() != null ? dto.getApplicationTrendType() : "");
+        criterial.put("dateFrom", dto.getDateFrom() != null ? dto.getDateFrom() : "");
+        criterial.put("dateTo", dto.getDateTo() != null ? dto.getDateTo() : "");
+        criterial.put("decidedDateFrom", dto.getDecidedDateFrom() != null ? dto.getDecidedDateFrom() : "");
+        criterial.put("decidedDateTo", dto.getDecidedDateTo() != null ? dto.getDecidedDateTo() : "");
+        criterial.put("chairMan", dto.getChairMan() != null ? dto.getChairMan() : "");
+        criterial.put("wonBy", dto.getWonBy() != null ? dto.getWonBy() : "");
+        return getApplications(criterial);
+    }
+
     public List<ApplicationRegister> getApplications(Map<String, String> criterial) {
 
         List<ApplicationRegister> applicationRegisters;
@@ -714,10 +743,18 @@ public class GlobalMethods {
             parameter = parameter + " d.decided_by=:chairMan ";
         }
 
+        if ((!criterial.get("wonBy").isEmpty()) && (criterial.get("wonBy")) != null) {
+            if (!parameter.isEmpty()) {
+                parameter = parameter + joiner;
+            }
+            parameter = parameter + " d.won_by=:won_by ";
+        }
+
         if (criterial.get("tax").isEmpty() && criterial.get("applicationTrendType").isEmpty() && criterial.get("dateFrom").isEmpty()
                 && criterial.get("dateTo").isEmpty() && criterial.get("region").isEmpty() && criterial.get("hearing").isEmpty()
                 &&  criterial.get("decidedDateFrom").isEmpty()&&
                 criterial.get("decidedDateTo").isEmpty() && criterial.get("chairMan").isEmpty()
+                && criterial.get("wonBy").isEmpty()
         ) {
             sqlQuery = "select * from application_register ";
             Query q = em.createNativeQuery(sqlQuery, ApplicationRegister.class);
@@ -728,7 +765,7 @@ public class GlobalMethods {
             Query q = em.createNativeQuery(sqlQuery, ApplicationRegister.class);
             getQueryFromSelection(criterial, q);
             if ((!criterial.get("region").isEmpty()) && (criterial.get("region")) != null) {
-                q.setParameter("region", criterial.get("region").toUpperCase());
+                q.setParameter("region", "%" + criterial.get("region").toUpperCase() + "%");
             }
 
             applicationRegisters = q.getResultList();
@@ -771,6 +808,12 @@ public class GlobalMethods {
         }
     }
 
+    public List<Notice> getNotices(NoticeFilterDto dto) {
+        Map<String, String> criterial = new HashMap<>();
+        criterial.put("dateFrom", dto.getDateFrom() != null ? dto.getDateFrom() : "");
+        criterial.put("dateTo", dto.getDateTo() != null ? dto.getDateTo() : "");
+        return getNotices(criterial);
+    }
 
     public List<Notice> getNotices(Map<String, String> criterial) {
 
@@ -803,7 +846,7 @@ public class GlobalMethods {
             parameter = " where " + parameter;
             sqlQuery = " select * from notice d " + parameter;
 
-            System.out.println("###########  QUERY ##############" + sqlQuery);
+            log.debug("Notice query: {}", sqlQuery);
 
             Query q = em.createNativeQuery(sqlQuery, Notice.class);
 
@@ -821,13 +864,25 @@ public class GlobalMethods {
 
     }
 
+    public List<Appeals> getAppeals(AppealFilterDto dto) {
+        Map<String, String> criterial = new HashMap<>();
+        criterial.put("isTribunal", dto.getIsTribunal() != null ? dto.getIsTribunal() : "");
+        criterial.put("hearing", dto.getHearing() != null ? dto.getHearing() : "");
+        criterial.put("tax", dto.getTax() != null ? dto.getTax() : "");
+        criterial.put("region", dto.getRegion() != null ? dto.getRegion() : "");
+        criterial.put("applicationTrendType", dto.getApplicationTrendType() != null ? dto.getApplicationTrendType() : "");
+        criterial.put("dateFrom", dto.getDateFrom() != null ? dto.getDateFrom() : "");
+        criterial.put("dateTo", dto.getDateTo() != null ? dto.getDateTo() : "");
+        criterial.put("decidedDateFrom", dto.getDecidedDateFrom() != null ? dto.getDecidedDateFrom() : "");
+        criterial.put("decidedDateTo", dto.getDecidedDateTo() != null ? dto.getDecidedDateTo() : "");
+        criterial.put("chairMan", dto.getChairMan() != null ? dto.getChairMan() : "");
+        criterial.put("wonBy", dto.getWonBy() != null ? dto.getWonBy() : "");
+        return getAppeals(criterial);
+    }
 
     public List<Appeals> getAppeals(Map<String, String> criterial) {
 
-
-
-        System.out.println("#### Get Appeals ###");
-        TrabHelper.print(criterial);
+        log.debug("Getting appeals with criteria");
         List<Appeals> appeals;
 
         String parameter = "";
@@ -903,7 +958,6 @@ public class GlobalMethods {
         }
 
         if (!criterial.get("applicationTrendType").isEmpty()) {
-            System.out.println("inside Trend Type");
             if (!parameter.isEmpty()) {
                 parameter = parameter + joiner;
             }
@@ -982,7 +1036,7 @@ public class GlobalMethods {
             parameter = " where " + parameter;
             sqlQuery = " select * from  appeals d " + parameter + "  ORDER BY CAST(SUBSTRING_INDEX(appeal_no, '/', -1) AS UNSIGNED), CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(appeal_no, '.', -1), '/', 1) AS UNSIGNED) ";
 
-            System.out.println("## " + sqlQuery);
+            log.debug("Appeals query: {}", sqlQuery);
             Query q = em.createNativeQuery(sqlQuery, Appeals.class);
 
             getQueryFromSelection(criterial, q);
@@ -1056,7 +1110,7 @@ public class GlobalMethods {
 
             });
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error saving bill from DTO", e);
         }
         return savedBill;
     }
@@ -1077,8 +1131,7 @@ public class GlobalMethods {
 
     public Response<Summons> createSummon(Map<String, String> req, boolean isNew) {
 
-        System.out.println("#### request#####");
-        TrabHelper.print(req);
+        log.debug("Creating summon, isNew: {}", isNew);
 
         Response<Summons> res = new Response<>();
         try {
@@ -1127,21 +1180,17 @@ public class GlobalMethods {
 
             mapList = mapper.readValue(req.get("appList"), List.class);
 
-            if(mapList.size()<1){
-                res.setDescription("Please select Appeals or Applications For Summons creation!!!");
+            if (mapList.isEmpty()) {
+                res.setDescription("Please select Appeals or Applications for Summons creation");
                 res.setStatus(false);
                 res.setData(null);
                 res.setCode(ResponseCode.FAILURE);
                 return res;
             }
 
-
-
-            if (mapList.size() > 0) {
-                mapList.forEach(x -> {
-                    appList.set(appList + " , " + x.get("id"));
-                });
-            }
+            mapList.forEach(x -> {
+                appList.set(appList + " , " + x.get("id"));
+            });
 
             summons.setAppList(appList.get());
             summons.setVenue(req.get("venue"));
@@ -1198,19 +1247,15 @@ public class GlobalMethods {
                         idLong2 = idInt.longValue();
                     }
 
-                    System.out.println("id: " + idLong2);
                     Appeals appeal = appealsRepository.findById(idLong2).get();
 
                     summonsAppeals.setAppealId(appeal.getAppealId().toString());
                     summonsAppeals.setSummonId(newSummons.getSummonId().toString());
 
-                    //summonRepository.save(summonsAppeals);
                     appeal.setSummons(newSummons);
                     appealsRepository.save(appeal);
 
-
-                    System.out.println("appeal saved with summon: "+  newSummons.getSummonId());
-
+                    log.debug("Appeal {} saved with summon: {}", appeal.getAppealId(), newSummons.getSummonId());
 
                     newSummons.setTaxType(appeal.getTax().getTaxName());
                     newSummons.setSummonNo(newSummons.getSummonId().toString());
@@ -1275,13 +1320,32 @@ public class GlobalMethods {
                 return res;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error creating summon", e);
             res.setDescription("Service Temporary Unavailable");
             res.setStatus(false);
             res.setCode(ResponseCode.FAILURE);
-
         }
         return res;
+    }
+
+    /**
+     * Overloaded method to create summon from CreateSummonDto
+     */
+    public Response<Summons> createSummon(CreateSummonDto dto, boolean isNew) {
+        Map<String, String> req = new HashMap<>();
+        req.put("summoId", dto.getSummoId());
+        req.put("startDate", dto.getStartDate());
+        req.put("endDate", dto.getEndDate());
+        req.put("judge", dto.getJudge());
+        req.put("appList", dto.getAppList());
+        req.put("venue", dto.getVenue());
+        req.put("time", dto.getTime());
+        req.put("memberOne", dto.getMemberOne());
+        req.put("memberTwo", dto.getMemberTwo());
+        req.put("drawnByAdress", dto.getDrawnByAdress());
+        req.put("drawnByName", dto.getDrawnByName());
+        req.put("name", dto.getName());
+        return createSummon(req, isNew);
     }
 
 
@@ -1323,14 +1387,14 @@ public class GlobalMethods {
                 summonDto.setType(summon.getSummonType());
                 summonDto.setVenue(summon.getVenue());
                 summonDtoList.add(summonDto);
-            }catch (Exception e) {
-                e.printStackTrace();
+            } catch (Exception e) {
+                log.error("Error creating summon DTO", e);
             }
         });
     }
 
 
-    public boolean checkIfAllowedFile(String extension){
+    public boolean checkIfAllowedFile(String extension) {
         String[] allowedFormat = {"xls", "csv", "xlsx"};
         return Arrays.asList(allowedFormat).contains(extension.toLowerCase());
     }
@@ -1338,16 +1402,13 @@ public class GlobalMethods {
     public String extractControlNumber(String sample) {
         String payControlNum = null;
         try {
-//            Pattern p = Pattern.compile("(99\\d+)");
-            //(99\d{10,1})
             Pattern p = Pattern.compile("(99\\d{10,13})");
             Matcher m = p.matcher(sample);
             if (m.find()) {
                 payControlNum = m.group();
             }
-
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error extracting control number", e);
         }
         return payControlNum;
     }
@@ -1385,23 +1446,20 @@ public class GlobalMethods {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error converting HashMap to CSV", e);
         }
         return csvBuilder;
-
     }
 
 
     /**
      * @return size with description
-     * @author Joel M Gaitan reding different of files xsl , csv and xlsx
+     * @author Joel M Gaitan reading different of files xsl, csv and xlsx
      */
-
     public HashMap<Integer, ArrayList<String>> readReconFile(String rootFileName, String fileExtension) {
         storedFileData = new HashMap<>();
 
-        System.out.println("extension: " + fileExtension);
-        System.out.println("file name: " + rootFileName);
+        log.debug("Reading recon file - extension: {}, filename: {}", fileExtension, rootFileName);
 
         try {
             switch (fileExtension.toLowerCase()) {
@@ -1415,8 +1473,6 @@ public class GlobalMethods {
                     storedFileData = this.readXlsxFile(rootFileName);
                     break;
                 case "txt":
-                    storedFileData = null;
-                    break;
                 case "xml":
                     storedFileData = null;
                     break;
@@ -1427,10 +1483,8 @@ public class GlobalMethods {
                     storedFileData = null;
                     break;
             }
-
         } catch (Exception e) {
-            e.printStackTrace();
-
+            log.error("Error reading recon file: {}", rootFileName, e);
         }
         return storedFileData;
     }
@@ -1471,37 +1525,30 @@ public class GlobalMethods {
             }
 
             br.close();
-
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error reading CSV file", e);
         }
         return storedFileData;
     }
 
 
     /**
-     *
      * @author Joel M Gaitan - MoFP
      * @param rootFileName
-     * @return
+     * @return HashMap of file data
      * @throws ParseException
      */
     private HashMap<Integer, ArrayList<String>> readXlsxFile(String rootFileName) throws ParseException {
         try {
             storedFileData = new HashMap<>();
-
             int rowCount = 0;
-
             ArrayList<String> rowData = new ArrayList<>();
 
-            InputStream ExcelFileToRead = new FileInputStream(rootFileName);
-
-            Workbook wb = new XSSFWorkbook(ExcelFileToRead);
-
+            InputStream excelFileToRead = new FileInputStream(rootFileName);
+            Workbook wb = new XSSFWorkbook(excelFileToRead);
             Sheet sheet = wb.getSheetAt(0);
 
             int rowStart = sheet.getFirstRowNum();
-
             int rowEnd = sheet.getLastRowNum();
 
             for (int rowNum = rowStart; rowNum < rowEnd; rowNum++) {
@@ -1515,19 +1562,17 @@ public class GlobalMethods {
                     if (currentCell == null) {
                         rowData.add("");
                     } else {
-                        rowData.add(this.getCellValue(currentCell) !=null?this.getCellValue(currentCell).replaceAll(",", ""):null);
+                        rowData.add(this.getCellValue(currentCell) != null ? this.getCellValue(currentCell).replaceAll(",", "") : null);
                     }
                 }
                 storedFileData.put(rowCount, rowData);
                 rowCount++;
                 rowData = new ArrayList<>();
             }
-
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Error reading XLSX file: {}", rootFileName, e);
         }
         return storedFileData;
-
     }
 
 
@@ -1562,9 +1607,7 @@ public class GlobalMethods {
             }
 
         } catch (Exception e) {
-            //System.out.println("Error: " + currentCell.getCellType() + " " + currentCell.getColumnIndex() + " " + currentCell.getStringCellValue());
-            e.printStackTrace();
-
+            log.error("Error getting cell value at column: {}", currentCell.getColumnIndex(), e);
         }
         return cellValue;
     }
@@ -1585,7 +1628,7 @@ public class GlobalMethods {
             int rowStart = sheet.getFirstRowNum();
             int rowEnd = sheet.getLastRowNum();
 
-            Iterator rows = sheet.rowIterator();
+            Iterator<Row> rows = sheet.rowIterator();
             storedFileData = new HashMap<>();
             ArrayList<String> rowData = new ArrayList<>();
             int rowCount = 0;
@@ -1608,10 +1651,9 @@ public class GlobalMethods {
                 rowData = new ArrayList<>();
             }
         } catch (IOException ex) {
-            ex.printStackTrace();
+            log.error("Error reading XLS file: {}", rootFileName, ex);
         }
         return storedFileData;
-
     }
 
 
@@ -1649,19 +1691,16 @@ public class GlobalMethods {
             status = true;
         } catch (Exception e) {
             billLogger.error("Failed message to exchange: " + exchangeName + ", routing Key: " + routingKey + ",content: " + receivedContent);
-            e.printStackTrace();
+            log.error("Error publishing to exchange", e);
         }
         return status;
     }
 
 
-
     /**
-     *
      * @author Joel M Gaitan - MoFP
      * @param reconFileDtoCsv
      * @param writer
-     * @retun void
      * @desc This Method is used to write to csv reconc file
      */
     public void csvWriterReconFile(Writer writer, String reconFileDtoCsv) {
@@ -1669,7 +1708,7 @@ public class GlobalMethods {
             writer.write(reconFileDtoCsv);
             writer.close();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error writing CSV recon file", e);
         }
     }
 
@@ -1691,6 +1730,34 @@ public class GlobalMethods {
                 req.get("email"),
                 req.get("phone"),
                 req.get("natOf")
+        );
+    }
+
+    /**
+     * Overloaded method to save appellant from CreateAppealDto
+     */
+    public Appellant saveAppellant(CreateAppealDto req, Notice notice) {
+        String name = notice.getAppelantName() != null ? notice.getAppelantName() : null;
+        return appellantService.findOrCreateByTin(
+                req.getTinNumber(),
+                name,
+                req.getEmail(),
+                req.getPhone(),
+                req.getNatOf()
+        );
+    }
+
+    /**
+     * Overloaded method to save appellant from EditAppealDto
+     */
+    public Appellant saveAppellant(EditAppealDto req, Notice notice) {
+        String name = notice.getAppelantName() != null ? notice.getAppelantName() : req.getAppealantName();
+        return appellantService.findOrCreateByTin(
+                null,
+                name,
+                null,
+                null,
+                req.getNatOf()
         );
     }
 
@@ -1729,7 +1796,7 @@ public class GlobalMethods {
     public Response<String> getApplications (List<ApplicationRegister> applicationRegisters) throws IOException {
         excelFileCreator.newReportExcel();
 
-        Response response = new Response();
+        Response<String> response = new Response<>();
 
 
         String[] headers = new String[]{"APPLICATION NO", "TAX TYPE", "APPLICANT", "RESPONDENT", "FILLING DATE", "DECISION DATE", "STATUS ", "DECIDED BY"};

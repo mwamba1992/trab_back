@@ -7,9 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tz.go.mof.trab.config.userextractor.LoggedUser;
 import tz.go.mof.trab.dto.user.JudgeDto;
-import tz.go.mof.trab.models.Judge;
 import tz.go.mof.trab.models.Members;
-import tz.go.mof.trab.repositories.JudgeRepository;
 import tz.go.mof.trab.repositories.MembersRepository;
 import tz.go.mof.trab.utils.ListResponse;
 import tz.go.mof.trab.utils.Response;
@@ -30,11 +28,6 @@ public class MembersServiceImpl implements  MembersService {
 
     private static final Logger logger = LoggerFactory.getLogger(MembersServiceImpl.class);
 
-
-    Response<Members> response = new Response<Members>();
-
-    ListResponse<Members> responseList = new ListResponse<Members>();
-
     @Autowired
     private MembersRepository membersRepository;
 
@@ -45,9 +38,10 @@ public class MembersServiceImpl implements  MembersService {
 
     @Override
     public ListResponse<Members> findAllMembers() {
+        ListResponse<Members> responseList = new ListResponse<>();
         logger.info(loggedUser.getInfo().toString());
         List<Members> gfsList = membersRepository.findByActiveTrue();
-        if (gfsList.size() < 1) {
+        if (gfsList.isEmpty()) {
             responseList.setCode(ResponseCode.NO_RECORD_FOUND);
             responseList.setStatus(false);
             responseList.setData(null);
@@ -62,9 +56,9 @@ public class MembersServiceImpl implements  MembersService {
 
     @Override
     public Response<Members> getOneMember(String gsfId) {
-        membersRepository.findById(gsfId).get();
-        response.setCode(ResponseCode.SUCCESS);
+        Response<Members> response = new Response<>();
         response.setData(membersRepository.findById(gsfId).get());
+        response.setCode(ResponseCode.SUCCESS);
         response.setDescription("SUCCESS");
         response.setStatus(true);
         return response;
@@ -72,12 +66,12 @@ public class MembersServiceImpl implements  MembersService {
 
     @Override
     public Response<Members> saveMember(JudgeDto judgeDto) {
+        Response<Members> response = new Response<>();
         try {
             if (membersRepository.findMembersByName(judgeDto.getName()) == null) {
                 Members members = new Members();
                 TrabHelper.copyNonNullProperties(judgeDto, members);
 
-                response.setCode(ResponseCode.SUCCESS);
                 members.setCreatedBy(loggedUser.getInfo().getName());
                 response.setData(membersRepository.save(members));
                 response.setCode(ResponseCode.SUCCESS);
@@ -86,12 +80,12 @@ public class MembersServiceImpl implements  MembersService {
             } else {
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Gfs Code Already Exists");
+                response.setDescription("Member already exists");
                 response.setStatus(false);
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error saving member", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
             response.setDescription("FAILURE");
@@ -103,9 +97,10 @@ public class MembersServiceImpl implements  MembersService {
 
     @Override
     public Response<Members> editMember(JudgeDto judgeDto, String gsfId) {
+        Response<Members> response = new Response<>();
         try {
-            if (membersRepository.findById(gsfId).get() != null) {
-                Members  members = membersRepository.findById(gsfId).get();
+            Members members = membersRepository.findById(gsfId).orElse(null);
+            if (members != null) {
                 TrabHelper.copyNonNullProperties(judgeDto, members);
 
                 members.setUpdatedAt(LocalDateTime.now());
@@ -118,14 +113,14 @@ public class MembersServiceImpl implements  MembersService {
             } else {
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Error! Updating Currency");
+                response.setDescription("Error updating member");
                 response.setStatus(false);
             }
 
         } catch (Exception e) {
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Not Found");
+            response.setDescription("Member not found");
             response.setStatus(false);
         }
         return response;
@@ -133,6 +128,7 @@ public class MembersServiceImpl implements  MembersService {
 
     @Override
     public Response<Members> deleteMember(String gsfId) {
+        Response<Members> response = new Response<>();
         try {
             Members members = membersRepository.findById(gsfId).get();
             members.setDeleted(true);
@@ -147,10 +143,10 @@ public class MembersServiceImpl implements  MembersService {
             response.setStatus(true);
 
         }catch (Exception e){
-            logger.error("#########"+ e.getMessage() + "############");
+            logger.error("Error deleting member", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Could Not be Deleted");
+            response.setDescription("Member could not be deleted");
             response.setStatus(false);
         }
 

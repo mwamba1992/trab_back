@@ -20,10 +20,6 @@ public class RegionServiceImpl implements RegionService {
 
 	private static final Logger logger = LoggerFactory.getLogger(RegionServiceImpl.class);
 
-	Response<Region> response = new Response<Region>();
-
-	ListResponse<Region> listResponse = new ListResponse<Region>();
-
 	@Autowired
 	RegionRepository regionRepository;
 	
@@ -32,12 +28,11 @@ public class RegionServiceImpl implements RegionService {
 
 	@Override
 	public ListResponse<Region> listAllRegions() {
-
-// TODO Auto-generated method stub
+		ListResponse<Region> listResponse = new ListResponse<>();
 		try {
 
 			List<Region> regions= regionRepository.findAll();
-			if(regions.size() >0 ) {
+			if (!regions.isEmpty()) {
 				listResponse.setData(regions);
 				listResponse.setCode(ResponseCode.SUCCESS);
 				listResponse.setStatus(false);
@@ -48,7 +43,6 @@ public class RegionServiceImpl implements RegionService {
 			}
 
 		}catch (Exception e) {
-			// TODO: handle exception
 			logger.error("Failed to retrieve  regions with error : {} ",e);
 			listResponse.setData(null);
 			listResponse.setCode(ResponseCode.FAILURE);
@@ -59,8 +53,8 @@ public class RegionServiceImpl implements RegionService {
 	}
 	@Override
 	public Response<Region> getRegionByCode(String regionCode) {
-		 // TODO Auto-generated method stub
-        try {
+		Response<Region> response = new Response<>();
+		try {
 
             Optional<Region> council = regionRepository.findByCode(regionCode);
             if (council.isPresent()) {
@@ -74,7 +68,6 @@ public class RegionServiceImpl implements RegionService {
             }
 
         } catch (Exception e) {
-            // TODO: handle exception
             logger.error("Failed to retrieve  councils by region code with error : {} ", e);
             response.setData(null);
             response.setCode(ResponseCode.FAILURE);

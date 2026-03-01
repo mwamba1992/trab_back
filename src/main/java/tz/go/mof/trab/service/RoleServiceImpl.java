@@ -26,21 +26,15 @@ public class RoleServiceImpl implements RoleService {
 
 	private static final Logger logger = LoggerFactory.getLogger(RoleServiceImpl.class);
 
-	Response<Role> response = new Response<Role>();
-
-	ListResponse<Role> responseList = new ListResponse<Role>();
-
-	ListResponse<Role> listResponse = new ListResponse<Role>();
-
 	@Autowired
 	LoggedUser loggedUser;
-	
+
 	@Autowired
 	RoleRepository roleRepository;
 
 	@Override
 	public Response<Role> saveRole(RoleDto roleDto) {
-
+		Response<Role> response = new Response<>();
 		try {
 			Role role = new Role();
 
@@ -50,27 +44,27 @@ public class RoleServiceImpl implements RoleService {
 
 			Optional<Role> optRoleName = roleRepository.findByName(roleDto.getName());
 
-			if (optRoleName.isPresent() == true) {
+			if (optRoleName.isPresent()) {
 				response.setData(null);
 				response.setCode(ResponseCode.DUPLICATE);
 				response.setDescription("Role name already exists");
 				response.setStatus(false);
 			} else {
-				logger.info(" Registerring role with Details {}: ", role);
-				
+				logger.debug("Registering role: {}", role);
+
 				if(loggedUser.getInfo()!=null) {
 					  role.setCreatedBy(loggedUser.getInfo().getId());
-					}		
+					}
 				Role savedRole = roleRepository.save(role);
 				response.setData(savedRole);
 				response.setCode(ResponseCode.SUCCESS);
-				response.setDescription("Data was successfull saved");
+				response.setDescription("Data was successfully saved");
 				response.setStatus(true);
 
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to register role with error : {} ", e);
+			logger.error("Failed to register role", e);
 			response.setData(null);
 			response.setCode(ResponseCode.FAILURE);
 			response.setDescription(e.getMessage());
@@ -83,25 +77,26 @@ public class RoleServiceImpl implements RoleService {
 
 	@Override
 	public Response<Role> findByName(String name) {
+		Response<Role> response = new Response<>();
 		try {
 
 			Optional<Role> optRoleName = roleRepository.findByName(name);
 
-			if (optRoleName.isPresent() == true) {
+			if (optRoleName.isPresent()) {
 				response.setData(optRoleName.get());
 				response.setCode(ResponseCode.SUCCESS);
-				response.setDescription("Successfull");
+				response.setDescription("SUCCESS");
 				response.setStatus(true);
 			} else {
 				response.setData(null);
 				response.setCode(ResponseCode.NO_RECORD_FOUND);
-				response.setDescription("Non record was found");
+				response.setDescription("No record was found");
 				response.setStatus(false);
 
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to register role with error : {} ", e);
+			logger.error("Failed to find role by name", e);
 			response.setData(null);
 			response.setCode(ResponseCode.FAILURE);
 			response.setDescription(e.getMessage());
@@ -114,27 +109,28 @@ public class RoleServiceImpl implements RoleService {
 
 	@Override
 	public Response<Role> deleteRole(String roleId) {
+		Response<Role> response = new Response<>();
 		try {
 
 			Optional<Role> optRole = roleRepository.findById(roleId);
 
-			if (optRole.isPresent() == true) {
-				
+			if (optRole.isPresent()) {
+
 				roleRepository.deleteById(roleId);
 				response.setData(null);
 				response.setCode(ResponseCode.SUCCESS);
-				response.setDescription("Record was successfull deleted");
+				response.setDescription("Record was successfully deleted");
 				response.setStatus(true);
 			} else {
 				response.setData(null);
 				response.setCode(ResponseCode.NO_RECORD_FOUND);
-				response.setDescription("Non record was found");
+				response.setDescription("No record was found");
 				response.setStatus(false);
 
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to delete role with error : {} ", e);
+			logger.error("Failed to delete role", e);
 			response.setData(null);
 			response.setCode(ResponseCode.FAILURE);
 			response.setDescription(e.getMessage());
@@ -147,11 +143,12 @@ public class RoleServiceImpl implements RoleService {
 
 	@Override
 	public ListResponse<Role> getAllRoles() {
+		ListResponse<Role> listResponse = new ListResponse<>();
 		try {
 
 			List<Role> availableRoles = roleRepository.findAll();
 
-			if (availableRoles.size() > 0) {
+			if (!availableRoles.isEmpty()) {
 				listResponse.setData(availableRoles);
 				listResponse.setCode(ResponseCode.SUCCESS);
 				listResponse.setDescription("List of roles");
@@ -164,7 +161,7 @@ public class RoleServiceImpl implements RoleService {
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to retrieve all roles with error : {} ", e);
+			logger.error("Failed to retrieve all roles", e);
 			listResponse.setData(null);
 			listResponse.setCode(ResponseCode.FAILURE);
 			listResponse.setDescription(e.getMessage());
@@ -177,26 +174,27 @@ public class RoleServiceImpl implements RoleService {
 
 	@Override
 	public Response<Role> findById(String id) {
+		Response<Role> response = new Response<>();
 		try {
 
 			Optional<Role> optRole = roleRepository.findById(id);
 
-			if (optRole.isPresent() == true) {
-				
+			if (optRole.isPresent()) {
+
 				response.setData(optRole.get());
 				response.setCode(ResponseCode.SUCCESS);
-				response.setDescription("Successfull");
+				response.setDescription("SUCCESS");
 				response.setStatus(true);
 			} else {
 				response.setData(null);
 				response.setCode(ResponseCode.NO_RECORD_FOUND);
-				response.setDescription("Non record was found");
+				response.setDescription("No record was found");
 				response.setStatus(false);
 
 			}
 
 		} catch (Exception e) {
-			logger.error("Failed to get role by id : {} ", e);
+			logger.error("Failed to get role by id", e);
 			response.setData(null);
 			response.setCode(ResponseCode.FAILURE);
 			response.setDescription(e.getMessage());
@@ -210,7 +208,6 @@ public class RoleServiceImpl implements RoleService {
 
 	@Override
 	public Response<Role> updateRole(RoleDto roleDto, String roleId, BindingResult result) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 

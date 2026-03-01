@@ -62,6 +62,9 @@ public class NoticeServiceImpl implements NoticeService {
     @Value("${tz.go.trab.noOfDays}")
     private int noOfDays;
 
+    @Value("${tz.go.trab.email.registry}")
+    private String registryEmail;
+
     NoticeServiceImpl(NoticeRepository noticeRepository, LoggedUser loggedUser, FeesRepository feesRepository,
                       UserRepository userRepository, AdressRepository adressRepository, RegionService regionService,
                       AppealantRepository appealantRepository, CurrencyRepository currencyRepository,
@@ -91,7 +94,7 @@ public class NoticeServiceImpl implements NoticeService {
     @Override
     public Response < Notice > createNotice(Map < String, String > req) {
 
-        System.out.println("#### inside saving notice ####");
+        logger.debug("inside saving notice");
         TrabHelper.print(req);
         Response < Notice > response = new Response < > ();
         final int currentYear = new Date().getYear() + 1900;
@@ -167,7 +170,7 @@ public class NoticeServiceImpl implements NoticeService {
             bill.setBillReference("NOTICE-" + time);
             bill.setBillControlNumber("0");
             bill.setBillDescription("Fee For Lodging Notice of Appeal");
-            bill.setPayerEmail("registries@trab.go.tz");
+            bill.setPayerEmail(registryEmail);
             bill.setPayerPhone(req.get("phone")!=null?req.get("phone").replace("-", ""):"075310301");
             bill.setExpiryDate(getBillExpireDate());
             bill.setApprovedBy(loggedUser.getInfo().getName());
@@ -248,7 +251,7 @@ public class NoticeServiceImpl implements NoticeService {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error creating notice", e);
             response.setStatus(false);
             response.setDescription("Problem occurred Please Contact Support! ");
             response.setCode(ResponseCode.FAILURE);
@@ -300,7 +303,7 @@ public class NoticeServiceImpl implements NoticeService {
             res.setData(newNotice);
             res.setCode(ResponseCode.SUCCESS);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error editing notice", e);
             res.setDescription("Failed To Update Notice");
             res.setCode(ResponseCode.FAILURE);
             res.setStatus(false);

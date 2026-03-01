@@ -27,11 +27,6 @@ public class TaxTypeServiceImpl implements TaxTypeService {
 
     private static final Logger logger = LoggerFactory.getLogger(TaxTypeServiceImpl.class);
 
-
-    Response<TaxType> response = new Response<TaxType>();
-
-    ListResponse<TaxType> responseList = new ListResponse<TaxType>();
-
     @Autowired
     private TaxTypeRepository taxTypeRepository;
 
@@ -42,8 +37,9 @@ public class TaxTypeServiceImpl implements TaxTypeService {
 
     @Override
     public ListResponse<TaxType> findAllTaxTypes() {
+        ListResponse<TaxType> responseList = new ListResponse<>();
         List<TaxType> taxTypes = taxTypeRepository.findByActiveTrue();
-        if (taxTypes.size() < 1) {
+        if (taxTypes.isEmpty()) {
             responseList.setCode(ResponseCode.NO_RECORD_FOUND);
             responseList.setStatus(false);
             responseList.setData(null);
@@ -58,9 +54,9 @@ public class TaxTypeServiceImpl implements TaxTypeService {
 
     @Override
     public Response<TaxType> getOneTax(String gsfId) {
-        taxTypeRepository.findById(gsfId).get();
-        response.setCode(ResponseCode.SUCCESS);
+        Response<TaxType> response = new Response<>();
         response.setData(taxTypeRepository.findById(gsfId).get());
+        response.setCode(ResponseCode.SUCCESS);
         response.setDescription("SUCCESS");
         response.setStatus(true);
         return response;
@@ -68,11 +64,11 @@ public class TaxTypeServiceImpl implements TaxTypeService {
 
     @Override
     public Response<TaxType> saveTaxType(TaxTypeDto taxTypeDto) {
+        Response<TaxType> response = new Response<>();
         try {
                 TaxType taxType = new TaxType();
                 TrabHelper.copyNonNullProperties(taxTypeDto, taxType);
 
-                response.setCode(ResponseCode.SUCCESS);
                 taxType.setCreatedBy(loggedUser.getInfo().getName());
                 response.setData(taxTypeRepository.save(taxType));
                 response.setCode(ResponseCode.SUCCESS);
@@ -81,7 +77,7 @@ public class TaxTypeServiceImpl implements TaxTypeService {
 
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error saving tax type", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
             response.setDescription("FAILURE");
@@ -93,9 +89,10 @@ public class TaxTypeServiceImpl implements TaxTypeService {
 
     @Override
     public Response<TaxType> editTaxType(TaxTypeDto taxTypeDto, String gsfId) {
+        Response<TaxType> response = new Response<>();
         try {
-            if (taxTypeRepository.findById(gsfId).get() != null) {
-                TaxType taxType = taxTypeRepository.findById(gsfId).get();
+            TaxType taxType = taxTypeRepository.findById(gsfId).orElse(null);
+            if (taxType != null) {
                 TrabHelper.copyNonNullProperties(taxTypeDto, taxType);
 
                 taxType.setUpdatedAt(LocalDateTime.now());
@@ -108,14 +105,14 @@ public class TaxTypeServiceImpl implements TaxTypeService {
             } else {
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Error! Updating Currency");
+                response.setDescription("Error updating tax type");
                 response.setStatus(false);
             }
 
         } catch (Exception e) {
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Not Found");
+            response.setDescription("Tax type not found");
             response.setStatus(false);
         }
         return response;
@@ -123,6 +120,7 @@ public class TaxTypeServiceImpl implements TaxTypeService {
 
     @Override
     public Response<TaxType> deleteTaxType(String gsfId) {
+        Response<TaxType> response = new Response<>();
         try {
             TaxType taxType =  taxTypeRepository.findById(gsfId).get();
             taxType.setDeleted(true);
@@ -137,10 +135,10 @@ public class TaxTypeServiceImpl implements TaxTypeService {
             response.setStatus(true);
 
         }catch (Exception e){
-            logger.error("#########"+ e.getMessage() + "############");
+            logger.error("Error deleting tax type", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Could Not be Deleted");
+            response.setDescription("Tax type could not be deleted");
             response.setStatus(false);
         }
 

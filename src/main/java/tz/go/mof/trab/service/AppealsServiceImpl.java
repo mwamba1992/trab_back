@@ -1,11 +1,15 @@
 package tz.go.mof.trab.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import sun.jvm.hotspot.ui.SAEditorPane;
 import tz.go.mof.trab.config.userextractor.LoggedUser;
+import tz.go.mof.trab.dto.appeal.BacklogAppealDto;
+import tz.go.mof.trab.dto.appeal.CreateAppealDto;
+import tz.go.mof.trab.dto.appeal.RetrialDto;
 import tz.go.mof.trab.models.*;
 import tz.go.mof.trab.models.Currency;
 import tz.go.mof.trab.repositories.*;
@@ -22,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 @Transactional
 public class AppealsServiceImpl implements AppealsService {
 
+    private static final Logger log = LoggerFactory.getLogger(AppealsServiceImpl.class);
 
     private Date billExpireDate;
     @Value("${tz.go.trab.noOfDays}")
@@ -98,9 +103,9 @@ public class AppealsServiceImpl implements AppealsService {
     }
 
     @Override
-    public Response < Appeals > createAppeal(Map < String, String > request) {
-        System.out.println("###### appeal registration ######");
-        TrabHelper.print(request);
+    public Response < Appeals > createAppeal(CreateAppealDto request) {
+        log.info("Processing appeal registration");
+        log.debug("Appeal request: {}", request);
 
         Response < Appeals > res = new Response < > ();
         final int currentYear = new Date().getYear() + 1900;
@@ -110,17 +115,16 @@ public class AppealsServiceImpl implements AppealsService {
             List < Map < String, String >> witnessList;
             List < Map < String, String >> amountList;
 
-            Set witnessSet = new HashSet();
-            Set AppealAmountSet = new HashSet();
+            Set<Witness> witnessSet = new HashSet<>();
+            Set<AppealAmount> appealAmountSet = new HashSet<>();
             Appeals app = new Appeals();
             Bill bill = new Bill();
 
-            // SystemUser user = userRepository.findById(loggedUser.getInfo().getId()).get();
-            Notice notice = noticeRepository.findBynoticeNo(request.get("invoiceNo"));
+            Notice notice = noticeRepository.findBynoticeNo(request.getInvoiceNo());
 
 
-            witnessList = mapper.readValue(request.get("witnessList"), List.class);
-            amountList = mapper.readValue(request.get("amountList"), List.class);
+            witnessList = mapper.readValue(request.getWitnessList(), List.class);
+            amountList = mapper.readValue(request.getAmountList(), List.class);
 
 
             Date noticeDate = notice.getLoggedAt();
@@ -128,9 +132,8 @@ public class AppealsServiceImpl implements AppealsService {
             long diff = globalMethods.getDifferenceInDays(noticeDate, new Date());
 
 
-            System.out.println("Difference in days: " + diff);
-            System.out.println("Exempted: " + notice.isExemptedToFilled());
-            System.out.println("Reason: " + notice.getReasonToBeExempted());
+            log.debug("Appeal validation - Days since notice: {}, Exempted: {}, Reason: {}",
+                    diff, notice.isExemptedToFilled(), notice.getReasonToBeExempted());
 
             if (diff < 45 || !notice.getReasonToBeExempted().isEmpty()) {
 
@@ -154,23 +157,32 @@ public class AppealsServiceImpl implements AppealsService {
                 app.setCreatedDate(new Date());
                 app.setCurrencyOfAmountOnDispute("TZS");
                 app.setAppellantName(notice.getAppelantName());
-                app.setAssNo(request.get("assNo"));
-                app.setBankNo(request.get("bankNo"));
-                app.setBillNo(request.get("billNo"));
+                app.setAssNo(request.getAssNo());
+                app.setBankNo(request.getBankNo());
+                app.setBillNo(request.getBillNo());
                 app.setStatus("UNPROCESSED");
-                app.setRemarks(request.get("statement").isEmpty() ? "NO REMARKS" : request.get("statement"));
+                app.setRemarks(request.getStatement() == null || request.getStatement().isEmpty() ? "NO REMARKS" : request.getStatement());
                 app.setDateOfFilling(new Date());
-                app.setTaxedOff(request.get("taxedOffice"));
+                app.setTaxedOff(request.getTaxedOffice());
                 app.setOutcomeOfDecision("NO DECISION");
-                app.setNoticeNumber(request.get("invoiceNo"));
-                app.setNatureOfAppeal(request.get("natureOfAppeal"));
+                app.setNoticeNumber(request.getInvoiceNo());
+                app.setNatureOfAppeal(request.getNatureOfAppeal());
                 app.setIsFilledTrat(false);
-                app.setPhone(request.get("phone"));
-                app.setEmail(request.get("email"));
-                app.setTinNumber(request.get("tinNumber"));
-                app.setNatOfBus(request.get("natOf"));
+                app.setPhone(request.getPhone());
+                app.setEmail(request.getEmail());
+                app.setTinNumber(request.getTinNumber());
+                app.setNatOfBus(request.getNatOf());
                 app.setAction("1");
-                app.setCreatedBy("neema.mwandu");
+
+                UserDetails loggedUserInfo = loggedUser.getInfo();
+                if (loggedUserInfo == null) {
+                    res.setStatus(false);
+                    res.setCode(ResponseCode.FAILURE);
+                    res.setDescription("User session expired. Please login again.");
+                    return res;
+                }
+                app.setCreatedBy(loggedUserInfo.getName());
+                
 
 
                 Appellant appellant = globalMethods.saveAppellant(request, notice);
@@ -180,7 +192,7 @@ public class AppealsServiceImpl implements AppealsService {
                 Witness witness;
                 AppealAmount appealAmount = new AppealAmount();
 
-                if (witnessList.size() > 0) {
+                if (!witnessList.isEmpty()) {
 
                     for (Map < String, String > witnes: witnessList) {
                         witness = new Witness();
@@ -194,8 +206,8 @@ public class AppealsServiceImpl implements AppealsService {
                     app.setWitnessId(witnessSet);
                 }
 
-                AppealAmountSet = saveAmount(AppealAmountSet, amountList);
-                app.setAppealAmount(AppealAmountSet);
+                appealAmountSet = saveAmount(appealAmountSet, amountList);
+                app.setAppealAmount(appealAmountSet);
 
 
                 // setting up bill details
@@ -209,10 +221,10 @@ public class AppealsServiceImpl implements AppealsService {
                 bill.setBillEquivalentAmount(new BigDecimal("0"));
                 bill.setBillControlNumber("0");
                 bill.setBillDescription("Fee for lodging statement of appeal");
-                bill.setPayerEmail(request.get("email") !=null? request.get("email") : "");
-                bill.setPayerPhone(request.get("phone")!=null?request.get("phone").replace("-", ""):"0753107301");
+                bill.setPayerEmail(request.getEmail() != null ? request.getEmail() : "");
+                bill.setPayerPhone(request.getPhone() != null ? request.getPhone().replace("-", "") : "");
                 bill.setExpiryDate(getBillExpireDate());
-                bill.setApprovedBy("neema mwandu");
+                bill.setApprovedBy(loggedUserInfo.getName());
                 bill.setCurrency(currencyRepository.findByCurrencyShortName("TZS").getCurrencyShortName());
                 bill.setSpSystemId(systemId);
                 bill.setGeneratedDate(new java.sql.Date(new java.util.Date().getTime()));
@@ -220,7 +232,7 @@ public class AppealsServiceImpl implements AppealsService {
                 bill.setFinancialYear(financialYearService.getActiveFinalYear().getData().getFinancialYear());
 
 
-                if (witnessList.size() > 0) {
+                if (!witnessList.isEmpty()) {
                     bill.setBilledAmount(bill.getBilledAmount().add(witnessFee.get().getAmount()
                             .multiply(new BigDecimal(witnessSet.size()))));
 
@@ -228,13 +240,13 @@ public class AppealsServiceImpl implements AppealsService {
                             .multiply(new BigDecimal(witnessSet.size()))));
                 }
 
-                if (!request.get("statement").isEmpty()) {
+                if (request.getStatement() != null && !request.getStatement().isEmpty()) {
                     bill.setBilledAmount(bill.getBilledAmount().add(evidenceFee.get().getAmount()
-                            .multiply(new BigDecimal(Integer.valueOf(request.get("statement"))))));
+                            .multiply(new BigDecimal(Integer.valueOf(request.getStatement())))));
 
 
                     bill.setBillEquivalentAmount(bill.getBillEquivalentAmount().add(evidenceFee.get().getAmount()
-                            .multiply(new BigDecimal(Integer.valueOf(request.get("statement"))))));
+                            .multiply(new BigDecimal(Integer.valueOf(request.getStatement())))));
                 }
 
                 bill.setBilledAmount(bill.getBilledAmount().add(appealFee.get().getAmount()));
@@ -249,7 +261,7 @@ public class AppealsServiceImpl implements AppealsService {
                 BillItems billItems;
 
 
-                if (witnessList.size() > 0) {
+                if (!witnessList.isEmpty()) {
                     for (Map < String, String > wit: witnessList) {
                         billItems = new BillItems();
                         billItems.setBillItemDescription(bill.getBillDescription());
@@ -266,8 +278,8 @@ public class AppealsServiceImpl implements AppealsService {
                 }
 
 
-                if (!request.get("statement").isEmpty()) {
-                    for (int i = 0; i < Integer.parseInt(request.get("statement")); i++) {
+                if (request.getStatement() != null && !request.getStatement().isEmpty()) {
+                    for (int i = 0; i < Integer.parseInt(request.getStatement()); i++) {
 
                         billItems = new BillItems();
                         billItems.setBillItemDescription(bill.getBillDescription());
@@ -297,25 +309,25 @@ public class AppealsServiceImpl implements AppealsService {
 
                 if (gepgMiddleWare.sendRequestToGepg(newBill)) {
                     app.setBillId(newBill);
-                    app.setTax(taxTypeService.findById(request.get("typeOfTax")));
+                    app.setTax(taxTypeService.findById(request.getTypeOfTax()));
                     app.setStatusTrend(appealStatusTrendRepository.findAppealStatusTrendByAppealStatusTrendName("NEW"));
 
 
                     ManualAppealsSequence manualAppealsSequence = manualAppealsSequenceRepository.findAll().get(0);
-                    if(taxTypeService.findById(request.get("typeOfTax")).getTaxName().equals("VAT")) {
-                        app.setAppealNo(request.get("region").toUpperCase().toUpperCase() + "." +
+                    if(taxTypeService.findById(request.getTypeOfTax()).getTaxName().equals("VAT")) {
+                        app.setAppealNo(request.getRegion().toUpperCase().toUpperCase() + "." +
                                 manualAppealsSequence.getVatSequence()+ "/" + currentYear);
                         manualAppealsSequence.setVatSequence(manualAppealsSequence.getVatSequence()+1);
                         manualAppealsSequenceRepository.save(manualAppealsSequence);
 
-                    }else if(taxTypeService.findById(request.get("typeOfTax")).getTaxName().equals("CUSTOM AND EXCISE")){
-                        app.setAppealNo(request.get("region").toUpperCase() + "." +
+                    }else if(taxTypeService.findById(request.getTypeOfTax()).getTaxName().equals("CUSTOM AND EXCISE")){
+                        app.setAppealNo(request.getRegion().toUpperCase() + "." +
                                 manualAppealsSequence.getCustomSequence()+ "/" + currentYear);
                         manualAppealsSequence.setCustomSequence(manualAppealsSequence.getCustomSequence()+1);
                         manualAppealsSequenceRepository.save(manualAppealsSequence);
 
-                    }else if(taxTypeService.findById(request.get("typeOfTax")).getTaxName().equals("INCOME TAX")){
-                        app.setAppealNo(request.get("region").toUpperCase().toUpperCase() + "." +
+                    }else if(taxTypeService.findById(request.getTypeOfTax()).getTaxName().equals("INCOME TAX")){
+                        app.setAppealNo(request.getRegion().toUpperCase().toUpperCase() + "." +
                                 manualAppealsSequence.getIncomeSequence()+ "/" + currentYear);
                         manualAppealsSequence.setIncomeSequence(manualAppealsSequence.getIncomeSequence()+1);
                         manualAppealsSequenceRepository.save(manualAppealsSequence);
@@ -331,8 +343,7 @@ public class AppealsServiceImpl implements AppealsService {
                     res.setData(app);
                     res.setCode(ResponseCode.SUCCESS);
                 } else {
-
-                    System.out.println("Failed to send request to GEPG");
+                    log.error("Failed to send request to GEPG");
                     res.setStatus(false);
                     res.setDescription("Problem occurred Please Contact Support! ");
                     res.setCode(ResponseCode.FAILURE);
@@ -344,13 +355,9 @@ public class AppealsServiceImpl implements AppealsService {
                 res.setCode(ResponseCode.FAILURE);
             }
 
-
-            TrabHelper.print(res);
-
             return res;
         } catch (Exception e) {
-            System.out.println("Failed to send request to GEPGXXXX");
-            e.printStackTrace();
+            log.error("Failed to process appeal registration", e);
             res.setStatus(false);
             res.setDescription("Problem occurred Please Contact Support! ");
             res.setCode(ResponseCode.FAILURE);
@@ -359,9 +366,9 @@ public class AppealsServiceImpl implements AppealsService {
     }
 
     @Override
-    public Set saveAmount(Set appealAmountSet, List < Map < String, String >> amountList) {
+    public Set<AppealAmount> saveAmount(Set<AppealAmount> appealAmountSet, List<Map<String, String>> amountList) {
         AppealAmount appealAmount;
-        if (amountList.size() > 0) {
+        if (!amountList.isEmpty()) {
             for (Map < String, String > amount: amountList) {
                 appealAmount = new AppealAmount();
                 appealAmount.setAmountOnDispute(new BigDecimal(amount.get("amount")));
@@ -390,26 +397,26 @@ public class AppealsServiceImpl implements AppealsService {
     }
 
 
-    public Response uploadAppealManually(Map<String, String> request){
+    public Response uploadAppealManually(BacklogAppealDto request){
 
-        TrabHelper.print(request);
+        log.debug("Uploading appeal manually: {}", request);
         Appeals appeals = new Appeals();
-        Response response = new Response<>();
+        Response<Void> response = new Response<>();
         List < Map < String, String >> amountList;
         ObjectMapper mapper = new ObjectMapper();
-        Set AppealAmountSet = new HashSet();
+        Set<AppealAmount> appealAmountSet = new HashSet<>();
 
         try {
-            Region region = regionRepository.findById(request.get("region")).get();
-            String appealNo = region.getCode() + "." + request.get("appealNo");
-            TaxType taxType = taxTypeRepository.findById(request.get("tax")).get();
+            Region region = regionRepository.findById(request.getRegion()).get();
+            String appealNo = region.getCode() + "." + request.getAppealNo();
+            TaxType taxType = taxTypeRepository.findById(request.getTax()).get();
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
 
-            if (appealsRepository.findAppealsByAppealNoAndTax_Id(appealNo,
-                    request.get("tax")).size()>0) {
+            if (!appealsRepository.findAppealsByAppealNoAndTax_Id(appealNo,
+                    request.getTax()).isEmpty()) {
 
-                response = new Response();
+                response = new Response<>();
                 response.setCode(ResponseCode.FAILURE);
                 response.setDescription("Appeal already exist");
                 response.setStatus(false);
@@ -417,44 +424,44 @@ public class AppealsServiceImpl implements AppealsService {
             }
 
             appeals.setAppealNo(appealNo);
-            appeals.setAppellantName(request.get("appellantName"));
+            appeals.setAppellantName(request.getAppellantName());
 
             // Link to Appellant entity
             Appellant manualAppellant = appellantService.findOrCreateByTin(
-                    request.get("tin"),
-                    request.get("appellantName"),
+                    request.getTin(),
+                    request.getAppellantName(),
                     null,
-                    request.get("phone"),
+                    request.getPhone(),
                     null
             );
             appeals.setAppellant(manualAppellant);
 
-            appeals.setDateOfFilling(simpleDateFormat.parse(request.get("dateFilling").split("T")[0]));
+            appeals.setDateOfFilling(simpleDateFormat.parse(request.getDateFilling().split("T")[0]));
 
-            if(!request.get("decidedDate").isEmpty()){
-            appeals.setDecidedDate(simpleDateFormat.parse(request.get("decidedDate").split("T")[0]));
+            if(request.getDecidedDate() != null && !request.getDecidedDate().isEmpty()){
+            appeals.setDecidedDate(simpleDateFormat.parse(request.getDecidedDate().split("T")[0]));
             }
-            appeals.setStatusTrend(appealStatusTrendRepository.findAppealStatusTrendByAppealStatusTrendName(request.get("statusTrend")));
+            appeals.setStatusTrend(appealStatusTrendRepository.findAppealStatusTrendByAppealStatusTrendName(request.getStatusTrend()));
 
-            appeals.setDecidedBy(request.get("decidedBy")  !=null? request.get("decidedBy") : null);
-            appeals.setTax(taxTypeService.findById(request.get("tax")));
-            appeals.setSummaryOfDecree(request.get("summary") !=null? request.get("summary") : "");
-            appeals.setTinNumber(request.get("tin"));
-            appeals.setPhone(request.get("phone"));
-            appeals.setNatureOfAppeal(request.get("nature"));
+            appeals.setDecidedBy(request.getDecidedBy() != null ? request.getDecidedBy() : null);
+            appeals.setTax(taxTypeService.findById(request.getTax()));
+            appeals.setSummaryOfDecree(request.getSummary() != null ? request.getSummary() : "");
+            appeals.setTinNumber(request.getTin());
+            appeals.setPhone(request.getPhone());
+            appeals.setNatureOfAppeal(request.getNature());
             appeals.setBillId(null);
             appeals.setCreatedBy("System Created");
 
 
-            amountList = mapper.readValue(request.get("amountList"), List.class);
-            AppealAmountSet = saveAmount(AppealAmountSet, amountList);
-            appeals.setAppealAmount(AppealAmountSet);
+            amountList = mapper.readValue(request.getAmountList(), List.class);
+            appealAmountSet = saveAmount(appealAmountSet, amountList);
+            appeals.setAppealAmount(appealAmountSet);
             appealsRepository.save(appeals);
 
             response.setDescription("Successful Uploaded");
             response.setCode(ResponseCode.SUCCESS);
-        }catch (Exception e){
-            e.printStackTrace();
+        } catch (Exception e) {
+            log.error("Failed to upload appeal manually", e);
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("Failed to load appeal");
         }
@@ -462,31 +469,23 @@ public class AppealsServiceImpl implements AppealsService {
     }
 
     @Override
-    public Response registerForRetrial(Map<String, String> request) {
+    public Response registerForRetrial(RetrialDto request) {
         try {
-            // Retrieve appeal using provided parameters
-            Appeals appeal = appealsRepository.findByAppealNoAndTaxType(request.get("appealNo"), request.get("taxType"));
+            Appeals appeal = appealsRepository.findByAppealNoAndTaxType(request.getAppealNo(), request.getTaxType());
 
-            // Check if the appeal was found
             if (appeal == null) {
-                return new Response(false, ResponseCode.FAILURE, "Appeal not found", null);
+                return new Response<>(false, ResponseCode.FAILURE, "Appeal not found", null);
             }
 
-            // Create a new decision history entry
-            DecisionHistory decisionHistory = createDecisionHistory(appeal, request.get("reason"));
-
-            // Update the appeal for retrial
+            DecisionHistory decisionHistory = createDecisionHistory(appeal, request.getReason());
             updateAppealForRetrial(appeal, decisionHistory);
-
-            // Save the updated appeal
             appealsRepository.save(appeal);
 
-            return new Response(true, ResponseCode.SUCCESS, "Successfully registered for retrial", null);
+            return new Response<>(true, ResponseCode.SUCCESS, "Successfully registered for retrial", null);
 
         } catch (Exception e) {
-            // Log the exception for better traceability
-            e.printStackTrace();
-            return new Response(false, ResponseCode.FAILURE, "Failed to register for retrial: " + e.getMessage(), null);
+            log.error("Failed to register for retrial", e);
+            return new Response<>(false, ResponseCode.FAILURE, "Failed to register for retrial: " + e.getMessage(), null);
         }
     }
 
@@ -500,7 +499,8 @@ public class AppealsServiceImpl implements AppealsService {
         decisionHistory.setCreatedDate(new Date());
         decisionHistory.setReason(reason);
         decisionHistory.setDecidedDate(appeal.getDecidedDate());
-        decisionHistory.setCreatedBy(loggedUser.getInfo().getName());
+        UserDetails decisionUserInfo = loggedUser.getInfo();
+        decisionHistory.setCreatedBy(decisionUserInfo != null ? decisionUserInfo.getName() : "SYSTEM");
 
         // Save decision history and return it
         return decisionHistoryRepository.save(decisionHistory);

@@ -22,10 +22,6 @@ public class FeesServiceImpl implements FeesService{
 
     private static final Logger logger = LoggerFactory.getLogger(FeesServiceImpl.class);
 
-    Response<Fees> response = new Response<Fees>();
-
-    ListResponse<Fees> responseList = new ListResponse<Fees>();
-
     @Autowired
     private FeesRepository feesRepository;
 
@@ -43,8 +39,9 @@ public class FeesServiceImpl implements FeesService{
 
     @Override
     public ListResponse<Fees> findAllRevue() {
+        ListResponse<Fees> responseList = new ListResponse<>();
         List<Fees> revenueList =  feesRepository.findByActiveTrue();
-        if (revenueList.size() < 1) {
+        if (revenueList.isEmpty()) {
             responseList.setCode(ResponseCode.NO_RECORD_FOUND);
             responseList.setStatus(false);
             responseList.setData(null);
@@ -59,9 +56,9 @@ public class FeesServiceImpl implements FeesService{
 
     @Override
     public Response<Fees> getOneRevenue(String feeId) {
-        feesRepository.findById(feeId).get();
-        response.setCode(ResponseCode.SUCCESS);
+        Response<Fees> response = new Response<>();
         response.setData(feesRepository.findById(feeId).get());
+        response.setCode(ResponseCode.SUCCESS);
         response.setDescription("SUCCESS");
         response.setStatus(true);
         return response;
@@ -69,14 +66,14 @@ public class FeesServiceImpl implements FeesService{
 
     @Override
     public Response<Fees> saveRevenue(FeesDto feesDto) {
-        logger.info("########## Req ##########" + feesDto);
+        Response<Fees> response = new Response<>();
+        logger.debug("Saving fee: {}", feesDto);
 
         try {
 
                 Fees revenue = new Fees();
                 TrabHelper.copyNonNullProperties(feesDto, revenue);
 
-                response.setCode(ResponseCode.SUCCESS);
                 revenue.setCreatedBy(loggedUser.getInfo().getName());
                 revenue.setGfs(gfsService.findById(feesDto.getGfsId()));
                 revenue.setAction("1");
@@ -87,7 +84,7 @@ public class FeesServiceImpl implements FeesService{
 
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error saving fee", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
             response.setDescription("FAILURE");
@@ -99,9 +96,10 @@ public class FeesServiceImpl implements FeesService{
 
     @Override
     public Response<Fees> editRevenue(FeesDto feesDto, String feeId) {
+        Response<Fees> response = new Response<>();
         try {
-            if (feesRepository.findById(feeId).get() != null) {
-                Fees fees = feesRepository.findById(feeId).get();
+            Fees fees = feesRepository.findById(feeId).orElse(null);
+            if (fees != null) {
                 TrabHelper.copyNonNullProperties(feesDto, fees);
 
                 fees.setUpdatedAt(LocalDateTime.now());
@@ -115,14 +113,14 @@ public class FeesServiceImpl implements FeesService{
             } else {
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Error! Updating Currency");
+                response.setDescription("Error updating fee");
                 response.setStatus(false);
             }
 
         } catch (Exception e) {
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Not Found");
+            response.setDescription("Fee not found");
             response.setStatus(false);
         }
         return response;
@@ -131,6 +129,7 @@ public class FeesServiceImpl implements FeesService{
 
     @Override
     public Response<Fees> deleteRevenue(String feeId) {
+        Response<Fees> response = new Response<>();
         try {
             Fees fees = feesRepository.findById(feeId).get();
             fees.setDeleted(true);
@@ -146,10 +145,10 @@ public class FeesServiceImpl implements FeesService{
             response.setStatus(true);
 
         }catch (Exception e){
-            logger.error("########" + e.getMessage() + "###########");
+            logger.error("Error deleting fee", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Revenue! Could Not be Deleted");
+            response.setDescription("Fee could not be deleted");
             response.setStatus(false);
         }
 
@@ -158,7 +157,7 @@ public class FeesServiceImpl implements FeesService{
 
     @Override
     public Response<Fees> changeFeesStatus(String accountId, boolean status) {
-
+        Response<Fees> response = new Response<>();
         try{
 
             Fees fees = feesRepository.findById(accountId).get();
@@ -174,10 +173,10 @@ public class FeesServiceImpl implements FeesService{
 
 
         }catch (Exception e){
-            logger.error("########" + e.getMessage() + "###########");
+            logger.error("Error changing fee status", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("BankAccount! Could Not be Status Changed");
+            response.setDescription("Fee status could not be changed");
             response.setStatus(false);
         }
         return response;

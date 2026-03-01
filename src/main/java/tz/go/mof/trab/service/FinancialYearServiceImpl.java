@@ -27,11 +27,6 @@ public class FinancialYearServiceImpl implements FinancialYearService {
 
     private static final Logger logger = LoggerFactory.getLogger(FinancialYearServiceImpl.class);
 
-
-    Response<FinancialYear> response = new Response<FinancialYear>();
-
-    ListResponse<FinancialYear> responseList = new ListResponse<FinancialYear>();
-
     @Autowired
     private FinancialYearRepository financialYearRepository;
 
@@ -42,8 +37,9 @@ public class FinancialYearServiceImpl implements FinancialYearService {
 
     @Override
     public ListResponse<FinancialYear> findAllFinancialYears() {
+        ListResponse<FinancialYear> responseList = new ListResponse<>();
         List<FinancialYear> financialYears = financialYearRepository.findByDeletedFalse();
-        if (financialYears.size() < 1) {
+        if (financialYears.isEmpty()) {
             responseList.setCode(ResponseCode.NO_RECORD_FOUND);
             responseList.setStatus(false);
             responseList.setData(null);
@@ -58,6 +54,7 @@ public class FinancialYearServiceImpl implements FinancialYearService {
 
     @Override
     public Response<FinancialYear> getOneFinancialYear(String gsfId) {
+        Response<FinancialYear> response = new Response<>();
         response.setCode(ResponseCode.SUCCESS);
         response.setData(financialYearRepository.findById(gsfId).get());
         response.setDescription("SUCCESS");
@@ -67,6 +64,7 @@ public class FinancialYearServiceImpl implements FinancialYearService {
 
     @Override
     public Response<FinancialYear> saveFinancialYear(FinancialYearDto financialYearDto) {
+        Response<FinancialYear> response = new Response<>();
         try {
             if (financialYearRepository.findByFinancialYearAndActiveFalseAndDeletedFalse(
                     financialYearDto.getFinancialYear()) == null) {
@@ -75,7 +73,6 @@ public class FinancialYearServiceImpl implements FinancialYearService {
                 TrabHelper.copyNonNullProperties(financialYearDto, financialYear);
 
 
-                response.setCode(ResponseCode.SUCCESS);
                 financialYear.setCreatedBy(loggedUser.getInfo().getUsername());
                 financialYear.setActive(false);
                 response.setData(financialYearRepository.save(financialYear));
@@ -90,7 +87,7 @@ public class FinancialYearServiceImpl implements FinancialYearService {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error saving financial year", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
             response.setDescription("FAILURE");
@@ -102,9 +99,10 @@ public class FinancialYearServiceImpl implements FinancialYearService {
 
     @Override
     public Response<FinancialYear> editFinancialYear(FinancialYearDto financialYearDto, String financialYearId) {
+        Response<FinancialYear> response = new Response<>();
         try {
-            if (financialYearRepository.findById(financialYearId).get() != null) {
-                FinancialYear financialYear = financialYearRepository.findById(financialYearId).get();
+            FinancialYear financialYear = financialYearRepository.findById(financialYearId).orElse(null);
+            if (financialYear != null) {
                 TrabHelper.copyNonNullProperties(financialYearDto, financialYear);
 
                 financialYear.setUpdatedAt(LocalDateTime.now());
@@ -117,14 +115,14 @@ public class FinancialYearServiceImpl implements FinancialYearService {
             } else {
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Error! Updating Currency");
+                response.setDescription("Error updating financial year");
                 response.setStatus(false);
             }
 
         } catch (Exception e) {
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Not Found");
+            response.setDescription("Financial year not found");
             response.setStatus(false);
         }
         return response;
@@ -132,13 +130,14 @@ public class FinancialYearServiceImpl implements FinancialYearService {
 
     @Override
     public Response<FinancialYear> deleteFinancialYear(String gsfId) {
+        Response<FinancialYear> response = new Response<>();
         try {
             FinancialYear financialYear = financialYearRepository.findById(gsfId).get();
 
             if(financialYear.getActive()){
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Active Financial Year! Could Not be Deleted");
+                response.setDescription("Active Financial Year could not be deleted");
                 response.setStatus(false);
                 return response;
             }
@@ -154,10 +153,10 @@ public class FinancialYearServiceImpl implements FinancialYearService {
             response.setStatus(true);
 
         }catch (Exception e){
-            logger.error("#########"+ e.getMessage() + "############");
+            logger.error("Error deleting financial year", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Could Not be Deleted");
+            response.setDescription("Financial year could not be deleted");
             response.setStatus(false);
         }
 
@@ -166,29 +165,30 @@ public class FinancialYearServiceImpl implements FinancialYearService {
 
     @Override
     public Response<FinancialYear> changeFinancialYearPrice(String financialYearId, boolean status) {
-        if(status && financialYearRepository.findByActiveTrue().size()>0){
-            logger.error("######## Active Financial Present #######");
+        Response<FinancialYear> response = new Response<>();
+        if(status && !financialYearRepository.findByActiveTrue().isEmpty()){
+            logger.debug("Active financial year already present");
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Active Financial Present");
+            response.setDescription("Active financial year already present");
             response.setStatus(false);
             return response;
         }
 
         FinancialYear financialYear = financialYearRepository.findById(financialYearId).get();
         if(financialYear !=null){
-            logger.error("######## Update Financial Present #######");
+            logger.debug("Updating financial year status");
             financialYear.setActive(status);
             financialYearRepository.save(financialYear);
             response.setCode(ResponseCode.SUCCESS);
             response.setData(financialYear);
-            response.setDescription("Active Financial Present");
-            response.setStatus(false);
+            response.setDescription("SUCCESS");
+            response.setStatus(true);
         }else{
-            logger.error("######## Active Financial Present #######");
+            logger.debug("Financial year not found");
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Active Financial Present");
+            response.setDescription("Financial year not found");
             response.setStatus(false);
             return response;
         }
@@ -197,16 +197,16 @@ public class FinancialYearServiceImpl implements FinancialYearService {
 
     @Override
     public Response<FinancialYear> getActiveFinalYear() {
-        logger.info("financial list: " + financialYearRepository.findByActiveTrue().toString());
-        if(financialYearRepository.findByActiveTrue().size()>0){
-            logger.error("######## Active Financial Present #######");
+        Response<FinancialYear> response = new Response<>();
+        logger.debug("Getting active financial year");
+        if(!financialYearRepository.findByActiveTrue().isEmpty()){
             response.setCode(ResponseCode.SUCCESS);
             response.setData(financialYearRepository.findByActiveTrue().get(0));
-            response.setDescription("Active Financial Present");
+            response.setDescription("SUCCESS");
             response.setStatus(true);
             return response;
         }
-        response.setDescription("Success");
+        response.setDescription("No active financial year found");
         response.setStatus(false);
         response.setCode(ResponseCode.FAILURE);
         response.setData(null);

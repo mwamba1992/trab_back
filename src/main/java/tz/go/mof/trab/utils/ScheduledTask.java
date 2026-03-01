@@ -7,7 +7,10 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 import org.apache.poi.ss.extractor.ExcelExtractor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
@@ -27,6 +30,7 @@ import tz.go.mof.trab.repositories.*;
 @Component
 public class ScheduledTask {
 
+    private static final Logger log = LoggerFactory.getLogger(ScheduledTask.class);
 
     @Autowired
     TratAppealsRepository tratAppealsRepository;
@@ -52,6 +56,12 @@ public class ScheduledTask {
 
     @Autowired
     GlobalMethods globalMethods;
+
+    @Value("${tz.go.trab.email.registry}")
+    private String registryEmail;
+
+    @Value("${tz.go.trab.email.supervisors}")
+    private String supervisorEmailsConfig;
 
 
 
@@ -105,7 +115,7 @@ public class ScheduledTask {
             StringBuilder messageBuilder = entry.getValue();
 
             SimpleMailMessage msg = new SimpleMailMessage();
-            msg.setFrom("registry@trab.go.tz");
+            msg.setFrom(registryEmail);
             msg.setTo(judgeEmail);
             msg.setSubject("JUDGEMENT ON NOTICE REMINDER");
             msg.setText(messageBuilder.toString().trim());
@@ -114,22 +124,17 @@ public class ScheduledTask {
         }
 
 
-        System.out.println("####  chairman email sent #######");
-        System.out.println(supervisorSummaryMap);
+        log.debug("chairman email sent");
+        log.debug("supervisorSummaryMap: {}", supervisorSummaryMap);
 
-        // List of supervisor email addresses
-        List<String> supervisorEmails = Arrays.asList(
-                "bahati.moshi@trab.go.tz",
-                "sekela.mwabukusi@trab.go.tz",
-                "upendo.gowele@trab.go.tz",
-                "registry@trab.go.tz",
-                "joel.gaitan@hazina.go.tz"); // Add more emails as needed
+        // List of supervisor email addresses from configuration
+        List<String> supervisorEmails = Arrays.asList(supervisorEmailsConfig.split(","));
 
         // Send a summary email to each supervisor
         for (String supervisorEmail : supervisorEmails) {
             try {
                 SimpleMailMessage supervisorMsg = new SimpleMailMessage();
-                supervisorMsg.setFrom("registry@trab.go.tz");
+                supervisorMsg.setFrom(registryEmail);
                 supervisorMsg.setTo(supervisorEmail);
                 supervisorMsg.setSubject("Pending Appeals Summary");
 
@@ -144,7 +149,7 @@ public class ScheduledTask {
                 supervisorMsg.setText(summaryBuilder.toString().trim());
                 javaMailSender.send(supervisorMsg);
             }catch (Exception e){
-                e.printStackTrace();
+                log.error("Error sending supervisor email", e);
             }
         }
     }
@@ -154,7 +159,7 @@ public class ScheduledTask {
     @Scheduled(fixedRate = 1800000)
     public void updateYearlyCases(){
         try {
-            System.out.println("######## inside updating new cases ##########");
+            log.debug("inside updating new cases");
             String[] status = {"new", "decided", "pending"};
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
             int year = Calendar.getInstance().get(Calendar.YEAR);
@@ -164,8 +169,8 @@ public class ScheduledTask {
             Calendar c = Calendar.getInstance();   // this takes current date
             Calendar d = Calendar.getInstance();
 
-            System.out.println("#### year #### " + year);
-            System.out.println("###### month #### " + month);
+            log.debug("year: {}", year);
+            log.debug("month: {}", month);
 
 
             c.set(Calendar.DAY_OF_MONTH, 1);
@@ -332,13 +337,13 @@ public class ScheduledTask {
             }
 
         }catch (Exception e){
-            e.printStackTrace();
+            log.error("Error updating yearly cases", e);
         }
     }
 
     @Scheduled(fixedRate = 1800000)
     public void updateAppealsSummary(){
-        System.out.println("### appeals summary running #####");
+        log.debug("appeals summary running");
         try {
             if(appealsSummaryRepository.findById(1L).isPresent()) {
                 AppealsSummary appealsSummary = appealsSummaryRepository.findById(1L).get();
@@ -357,7 +362,7 @@ public class ScheduledTask {
                 appealsSummaryRepository.save(appealsSummary);
             }
         }catch (Exception e){
-        e.printStackTrace();
+            log.error("Error updating appeals summary", e);
         }
     }
 
@@ -372,7 +377,7 @@ public class ScheduledTask {
                 BigInteger noticeId = (BigInteger) row[0]; // Notice ID
                 String description = (String) row[1]; // Description
 
-                System.out.println("Notice ID: " + noticeId + ", Description: " + description);
+                log.debug("Notice ID: {}, Description: {}", noticeId, description);
                 String[] descriptionParts = description.split("-");
                 String appealNo = descriptionParts[0];
                 String taxType = descriptionParts[2];
@@ -386,10 +391,10 @@ public class ScheduledTask {
                 }
             }
 
-            System.out.println("Size: " + noticeListAppeals.size());
+            log.debug("Size: {}", noticeListAppeals.size());
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error updating TRAT appeal", e);
         }
     }
 
@@ -402,7 +407,7 @@ public class ScheduledTask {
             tratAppeal.setDecision("NEW");
             tratAppeal.setAppealFilled(true);
         } else {
-            System.out.println("Appeals not filled !!!!!!!!");
+            log.debug("Appeals not filled");
             tratAppeal.setAppealFilled(false);
         }
 
@@ -420,7 +425,7 @@ public class ScheduledTask {
             tratAppeal.setAppealFilled(true);
             updateTratAppealDetails(tratAppeal, tratAppeals.get(0));
         } else {
-            System.out.println("Appeals not filled !!!!!!!!");
+            log.debug("Appeals not filled");
             tratAppeal.setAppealFilled(false);
         }
 
@@ -441,7 +446,7 @@ public class ScheduledTask {
                 tratAppeal.setDecidedBy(object[14].toString());
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error updating TRAT appeal details", e);
         }
     }
 

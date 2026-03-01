@@ -27,9 +27,6 @@ public class ApplicationStatusTrendServiceImpl implements ApplicationStatusTrend
 
     private static final Logger logger = LoggerFactory.getLogger(ApplicationStatusTrendServiceImpl.class);
 
-    Response<ApplicationStatusTrend> response = new Response<ApplicationStatusTrend>();
-    ListResponse<ApplicationStatusTrend> responseList = new ListResponse<ApplicationStatusTrend>();
-
     @Autowired
     private ApplicationStatusTrendRepository applicationStatusTrendRepository;
 
@@ -41,8 +38,9 @@ public class ApplicationStatusTrendServiceImpl implements ApplicationStatusTrend
 
     @Override
     public ListResponse<ApplicationStatusTrend> findAllStatusTrend() {
+        ListResponse<ApplicationStatusTrend> responseList = new ListResponse<>();
         List<ApplicationStatusTrend> appealStatusTrends = (List<ApplicationStatusTrend>) applicationStatusTrendRepository.findAll();
-        if (appealStatusTrends.size() < 1) {
+        if (appealStatusTrends.isEmpty()) {
             responseList.setCode(ResponseCode.NO_RECORD_FOUND);
             responseList.setStatus(false);
             responseList.setData(null);
@@ -57,9 +55,11 @@ public class ApplicationStatusTrendServiceImpl implements ApplicationStatusTrend
 
     @Override
     public Response<ApplicationStatusTrend> getOneStatusTrend(String trendId) {
-        if (applicationStatusTrendRepository.findById(trendId).get() != null) {
+        Response<ApplicationStatusTrend> response = new Response<>();
+        ApplicationStatusTrend trend = applicationStatusTrendRepository.findById(trendId).orElse(null);
+        if (trend != null) {
             response.setCode(ResponseCode.SUCCESS);
-            response.setData(applicationStatusTrendRepository.findById(trendId).get());
+            response.setData(trend);
             response.setDescription("SUCCESS");
             response.setStatus(true);
         } else {
@@ -72,12 +72,12 @@ public class ApplicationStatusTrendServiceImpl implements ApplicationStatusTrend
 
     @Override
     public Response<ApplicationStatusTrend> saveStatusTrend(ApplicationStatusTrendDto appealStatusTrendDto) {
+        Response<ApplicationStatusTrend> response = new Response<>();
         try {
 
                 ApplicationStatusTrend applicationStatusTrend = new ApplicationStatusTrend();
                 TrabHelper.copyNonNullProperties(appealStatusTrendDto, applicationStatusTrend);
 
-                response.setCode(ResponseCode.SUCCESS);
                 applicationStatusTrend.setCreatedBy(loggedUser.getInfo().getName());
                 response.setCode(ResponseCode.SUCCESS);
                 response.setData(applicationStatusTrendRepository.save(applicationStatusTrend));
@@ -85,7 +85,7 @@ public class ApplicationStatusTrendServiceImpl implements ApplicationStatusTrend
                 response.setStatus(true);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error saving application status trend", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
             response.setDescription("FAILURE");
@@ -97,10 +97,10 @@ public class ApplicationStatusTrendServiceImpl implements ApplicationStatusTrend
 
     @Override
     public Response<ApplicationStatusTrend> editStatusTrend(ApplicationStatusTrend applicationStatusTrend, String trendId) {
-
+        Response<ApplicationStatusTrend> response = new Response<>();
         try {
-            if (applicationStatusTrendRepository.findById(trendId).get() != null) {
-                ApplicationStatusTrend  appealStatusTrendFromDB = applicationStatusTrendRepository.findById(trendId).get();
+            ApplicationStatusTrend appealStatusTrendFromDB = applicationStatusTrendRepository.findById(trendId).orElse(null);
+            if (appealStatusTrendFromDB != null) {
                 appealStatusTrendFromDB.setApplicationStatusTrendName(applicationStatusTrend.getApplicationStatusTrendName());
                 appealStatusTrendFromDB.setApplicationStatusTrendDesc(applicationStatusTrend.getApplicationStatusTrendDesc());
 
@@ -114,14 +114,14 @@ public class ApplicationStatusTrendServiceImpl implements ApplicationStatusTrend
             } else {
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Error! Updating Appeal Status Trends");
+                response.setDescription("Error updating application status trend");
                 response.setStatus(false);
             }
 
         } catch (Exception e) {
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Appeal Status Trend! Not Found");
+            response.setDescription("Application status trend not found");
             response.setStatus(false);
         }
         return response;
@@ -129,6 +129,7 @@ public class ApplicationStatusTrendServiceImpl implements ApplicationStatusTrend
 
     @Override
     public Response<ApplicationStatusTrend> deleteStatusTrend(String trendId) {
+        Response<ApplicationStatusTrend> response = new Response<>();
         try {
             ApplicationStatusTrend applicationStatusTrend = applicationStatusTrendRepository.findById(trendId).get();
             applicationStatusTrend.setDeleted(true);
@@ -143,10 +144,10 @@ public class ApplicationStatusTrendServiceImpl implements ApplicationStatusTrend
             response.setStatus(true);
 
         }catch (Exception e){
-            logger.error("########" + e.getMessage() + "###########");
+            logger.error("Error deleting application status trend", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Could Not be Deleted");
+            response.setDescription("Application status trend could not be deleted");
             response.setStatus(false);
         }
 

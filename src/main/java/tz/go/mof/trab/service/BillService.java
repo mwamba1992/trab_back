@@ -2,6 +2,7 @@ package tz.go.mof.trab.service;
 
 import org.springframework.http.ResponseEntity;
 import tz.go.mof.trab.dto.bill.BillDto;
+import tz.go.mof.trab.dto.bill.BillResendDto;
 import tz.go.mof.trab.dto.bill.BillSearchDto;
 import tz.go.mof.trab.dto.bill.BillSummaryReportDto;
 import tz.go.mof.trab.dto.bill.PortalBillRequestDto;
@@ -37,5 +38,7 @@ public interface BillService {
     ListResponse<Bill> getResponseCodeNullResponse();
 
     Response<Bill> billResend(Map<String , String> req);
+
+    Response<Bill> billResend(BillResendDto dto);
 
 }

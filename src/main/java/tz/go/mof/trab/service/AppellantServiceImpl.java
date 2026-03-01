@@ -149,6 +149,22 @@ public class AppellantServiceImpl implements AppellantService {
         return response;
     }
 
+    /**
+     * Normalize appellant name for matching:
+     * trim, uppercase, remove dots, collapse spaces, normalize suffixes.
+     */
+    private String normalizeName(String name) {
+        if (name == null) return "";
+        String n = name.trim().toUpperCase();
+        n = n.replace(".", "");
+        n = n.replaceAll("\\s+", " ");
+        n = n.replace("LIMITED", "LTD")
+             .replace("COMPANY", "CO")
+             .replace("CORPORATION", "CORP")
+             .replace("INCORPORATED", "INC");
+        return n.trim();
+    }
+
     @Override
     public Appellant findOrCreateByTin(String tinNumber, String name, String email, String phone, String natOfBus) {
         // 1. Search by TIN first (unique identifier)
@@ -159,7 +175,7 @@ public class AppellantServiceImpl implements AppellantService {
             }
         }
 
-        // 2. Search by exact name match
+        // 2. Search by exact name match (case-insensitive)
         if (name != null && !name.trim().isEmpty()) {
             Appellant byName = appealantRepository.findFirstByFirstNameIgnoreCase(name.trim());
             if (byName != null) {
@@ -167,7 +183,21 @@ public class AppellantServiceImpl implements AppellantService {
             }
         }
 
-        // 3. Not found — create new Appellant record
+        // 3. Search by normalized name against all existing appellants
+        //    Catches variants like "ABC Ltd" vs "ABC LIMITED" vs "A.B.C Ltd"
+        String normalizedInput = normalizeName(name);
+        if (!normalizedInput.isEmpty()) {
+            List<Appellant> allAppellants = new ArrayList<>();
+            appealantRepository.findAll().forEach(allAppellants::add);
+            for (Appellant existing : allAppellants) {
+                if (existing.getFirstName() != null
+                        && normalizeName(existing.getFirstName()).equals(normalizedInput)) {
+                    return existing;
+                }
+            }
+        }
+
+        // 4. Not found — create new Appellant record
         Appellant appellant = new Appellant();
         appellant.setFirstName(name != null ? name.trim() : "UNKNOWN");
         appellant.setLastName("");

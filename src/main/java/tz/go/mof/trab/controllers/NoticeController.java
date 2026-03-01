@@ -65,7 +65,7 @@ public class NoticeController {
         notice.setExemptedToFilled(true);
         notice.setReasonToBeExempted(req.get("reasonToBeExempted"));
         noticeRepository.save(notice);
-        Response response = new Response();
+        Response<Notice> response = new Response<>();
         response.setDescription("Notice updated successfully");
         response.setCode(ResponseCode.SUCCESS);
         return response;

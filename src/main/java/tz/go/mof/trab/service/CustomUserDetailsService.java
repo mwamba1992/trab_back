@@ -65,7 +65,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 			userAccount.setAuthorities(authorities);
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error("Error loading user by username", e);
 
 		}
 		return userAccount;
@@ -77,8 +77,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 		List<GrantedAuthority> authorities = new ArrayList<>();
 
 		for (Role role : rolesList) {
-			System.out.println("**************** ROLES *********************" + role.getPermissions());
-			role.getPermissions().forEach(System.out::println);
+			logger.debug("ROLES: {}", role.getPermissions());
 			for (Permission permission : role.getPermissions()) {
 				authorities.add(new SimpleGrantedAuthority(permission.getDisplayName()));
 			}

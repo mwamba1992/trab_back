@@ -170,8 +170,8 @@ public class PaymentController {
 		}
 	       return new ResponseEntity<>(responseString, HttpStatus.ACCEPTED);
 		}catch(Exception e){
-		  e.printStackTrace();
-		  
+		  paymentLogger.error("Error receiving payment", e);
+
 		}
 		
 		return null;

@@ -41,8 +41,6 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
     private static final Logger logger = LoggerFactory.getLogger(ReportsGeneratorServiceImpl.class);
 
-    public Response<String> response = new Response<String>();
-
     private ObjectMapper mapper = new ObjectMapper();
 
     @Autowired
@@ -87,6 +85,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
     @Override
     public Response<String> getPaymentsReports(String reportFormat, PaymentSearchDto paymentSearchDto) {
+        Response<String> response = new Response<>();
         try {
 
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
@@ -98,7 +97,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             String details = "";
             String dateFrom = "";
 
-            if (paymentList.size() < 1) {
+            if (paymentList.isEmpty()) {
 
                 response.setData(null);
                 response.setCode(ResponseCode.NO_RECORD_FOUND);
@@ -142,8 +141,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
             JRBeanCollectionDataSource source = new JRBeanCollectionDataSource(paymentList);
 
-            File FileName = new File(".");
-            Map<String, Object> parameters = new HashMap<String, Object>();
+            Map<String, Object> parameters = new HashMap<>();
             parameters.put("coat", REPORT_IMG);
             parameters.put("details", details);
             parameters.put("dateFrom", dateFrom);
@@ -176,8 +174,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             response.setCode(ResponseCode.SUCCESS);
             return response;
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("############### Exception Generation Payment Reports ########" + e.getMessage());
+            logger.error("Exception generating payment reports", e);
             response.setData(null);
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("");
@@ -190,6 +187,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
     @Override
     public Response<String> getPaymentSummary(String reportFormat, PaymentSearchDto paymentSearchDto) throws JRException, IOException {
+        Response<String> response = new Response<>();
         try {
 
             logger.info("####  payment search dtos #### " + paymentSearchDto);
@@ -197,13 +195,13 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
             SimpleDateFormat DateFor = new SimpleDateFormat("dd MMMM yyyy");
 
-            List<PaymentSummaryDto> paymentList = new ArrayList<PaymentSummaryDto>();
+            List<PaymentSummaryDto> paymentList = new ArrayList<>();
             paymentList = paymentService.searchPaymentSummary(paymentSearchDto);
 
             String details = "";
             String dateFrom = "";
 
-            if (paymentList.size() < 1) {
+            if (paymentList.isEmpty()) {
 
                 response.setData(null);
                 response.setCode(ResponseCode.NO_RECORD_FOUND);
@@ -233,8 +231,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
             JRBeanCollectionDataSource source = new JRBeanCollectionDataSource(paymentList);
 
-            File FileName = new File(".");
-            Map<String, Object> parameters = new HashMap<String, Object>();
+            Map<String, Object> parameters = new HashMap<>();
             parameters.put("coat", REPORT_IMG);
             parameters.put("details", details);
             parameters.put("dateFrom", dateFrom);
@@ -269,8 +266,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             response.setCode(ResponseCode.SUCCESS);
             return response;
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("############### Exception Generation Payment Reports ########" + e.getMessage());
+            logger.error("Exception generating payment summary report", e);
             response.setData(null);
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("");
@@ -284,7 +280,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
     @Override
     public Response<String> getBillSummary(String format, BillSummaryReportDto billSummaryReportDto, boolean isCount) {
-
+        Response<String> response = new Response<>();
         try {
 
             SimpleDateFormat dFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -295,7 +291,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             String details = "";
             String dateFrom = "";
 
-            if (billSummaries.size() < 1) {
+            if (billSummaries.isEmpty()) {
                 response.setData(null);
                 response.setCode(ResponseCode.NO_RECORD_FOUND);
                 response.setDescription("Record(s) Not Found");
@@ -332,8 +328,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
             JRBeanCollectionDataSource source = new JRBeanCollectionDataSource(billSummaries);
 
-            File FileName = new File(".");
-            Map<String, Object> parameters = new HashMap<String, Object>();
+            Map<String, Object> parameters = new HashMap<>();
             parameters.put("coat", REPORT_IMG);
             parameters.put("details", details);
             parameters.put("dateFrom", dateFrom);
@@ -380,8 +375,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             return response;
         } catch (Exception e) {
 
-            e.printStackTrace();
-            logger.error("############### Exception Generation  Bill Summary Reports ########" + e.getMessage());
+            logger.error("Exception generating bill summary reports", e);
             response.setData(null);
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("");
@@ -393,6 +387,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
     @Override
     public Response<String> getBillSummaryAmount(String format, BillSummaryReportDto billSummaryReportDto) throws JRException, IOException {
+        Response<String> response = new Response<>();
         try {
 
             SimpleDateFormat dFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -400,8 +395,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("############### Exception Generation  Bill Summary Reports ########" + e.getMessage());
+            logger.error("Exception generating bill summary amount reports", e);
             response.setData(null);
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("");
@@ -413,16 +407,16 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
     @Override
     public Response<String> getDefaulters(String format, BillSearchDto billSearchDto) throws JRException, IOException {
-
+        Response<String> response = new Response<>();
         try {
             SimpleDateFormat dFormat = new SimpleDateFormat("yyyy-MM-dd");
             SimpleDateFormat DateFor = new SimpleDateFormat("dd MMMM yyyy");
 
             List<Bill> billList = billService.searchBills(0, 0, billSearchDto);
 
-            System.out.println("bills from search: " + billList);
+            logger.debug("bills from search: {}", billList);
 
-            if (billList.size() < 1) {
+            if (billList.isEmpty()) {
                 response.setData(null);
                 response.setCode(ResponseCode.NO_RECORD_FOUND);
                 response.setDescription("Record(s) Not Found");
@@ -473,8 +467,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
             JRBeanCollectionDataSource source = new JRBeanCollectionDataSource(billList);
 
-            File FileName = new File(".");
-            Map<String, Object> parameters = new HashMap<String, Object>();
+            Map<String, Object> parameters = new HashMap<>();
             parameters.put("coat", REPORT_IMG);
             parameters.put("details", sourceName + details);
             parameters.put("dateFrom", dateFrom);
@@ -504,8 +497,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             return response;
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("############### Exception Generation  Bill defaulters Reports ########" + e.getMessage());
+            logger.error("Exception generating bill defaulters reports", e);
             response.setData(null);
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("");
@@ -517,16 +509,17 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
     @Override
     public Response<String> getSummons(String format, Long id, Boolean isRespondent) throws JRException, IOException {
+        Response<String> response = new Response<>();
         try {
             Summons summons = summonsRepository.findById(id).get();
 
-            logger.info("######### Summons ########" + summons.toString());
-            List<SummonDto> list = new ArrayList<SummonDto>();
+            logger.debug("Processing summons: {}", summons);
+            List<SummonDto> list = new ArrayList<>();
             SummonDto summonDto1 = new SummonDto();
 
             DateFormat Date = DateFormat.getDateInstance();
             Calendar cals = Calendar.getInstance();
-            System.out.println("The original Date: " + cals.getTime());
+            logger.debug("The original Date: {}", cals.getTime());
             String currentDate = Date.format(cals.getTime());
 
 
@@ -547,7 +540,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
             String afterRemoving = summons.getAppList().substring(1).replace(" ", "");
 
-            System.out.println(afterRemoving);
+            logger.debug("After removing: {}", afterRemoving);
             String removing[] = afterRemoving.split(",");
 
             TrabHelper.print(removing);
@@ -566,7 +559,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
                 if(summons.getSummonType().equals("APPEAL")) {
                     if (!removed.isEmpty()) {
                         String appealNo = appealsRepository.findById(Long.valueOf(removed)).get().getAppealNo();
-                        System.out.println(appealNo);
+                        logger.debug("appealNo: {}", appealNo);
                         year = appealNo.split("/")[1];
                         String connector = i == removing.length ? "" : " & ";
                         appList = appList + appealNo.split("/")[0].split("\\.")[1] + connector;
@@ -574,7 +567,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
                 }else{
                     if (!removed.isEmpty()) {
                         String appealNo = applicationRegisterRepository.findById(Long.valueOf(removed)).get().getApplicationNo();
-                        System.out.println(appealNo);
+                        logger.debug("applicationNo: {}", appealNo);
                         year = appealNo.split("/")[1];
                         String connector = i == removing.length ? "" : " & ";
                         appList = appList + appealNo.split("/")[0].split("\\.")[1] + connector;
@@ -607,8 +600,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             list.add(summonDto1);
             JRBeanCollectionDataSource source = new JRBeanCollectionDataSource(list);
 
-            File FileName = new File(".");
-            Map<String, Object> parameters = new HashMap<String, Object>();
+            Map<String, Object> parameters = new HashMap<>();
             parameters.put("coat", REPORT_IMG);
 
             File summonsTemplate = new File(REPORT_DESIGN_PATH + "summo.jrxml");
@@ -635,8 +627,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             return response;
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("############### Exception Generation  Bill defaulters Reports ########" + e.getMessage());
+            logger.error("Exception generating summons report", e);
             response.setData(null);
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("");
@@ -648,12 +639,12 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
     @Override
     public Response<String> getPath(String format, String id)  {
         String storagePath = uploadingDir;
-        System.out.println("storage: " + storagePath);
-        System.out.println("filename: " + id);
+        logger.debug("storage: {}", storagePath);
+        logger.debug("filename: {}", id);
 
 
         File file = new File(storagePath, id);
-        Response<String> fileResponse = new Response<String>();
+        Response<String> fileResponse = new Response<>();
         if (file.exists()) {
             try {
                 byte[] fileContent = FileUtils.readFileToByteArray(file);
@@ -662,7 +653,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
                 fileResponse.setCode(ResponseCode.SUCCESS);
                 fileResponse.setDescription("Attached File");
                 fileResponse.setStatus(true);
-                System.out.println("There file {} was encoded and returned succesifuly  ");
+                logger.debug("File {} was encoded and returned successfully", id);
                 return fileResponse;
 
             } catch (Exception e) {
@@ -673,7 +664,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
                 return fileResponse;
             }
         } else {
-            System.out.println("The file wit name {} does not exist ");
+            logger.debug("The file with name {} does not exist", id);
             fileResponse.setCode(ResponseCode.NO_RECORD_FOUND);
             fileResponse.setStatus(false);
             fileResponse.setDescription("No file attached for Assessment Report");
@@ -683,9 +674,8 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
     @Override
     public Response<String> getCauseListed(String reportFormat, BillSearchDto billSearchDto) {
-
-        logger.info("###### Inside Searching Cause List ######");
-
+        Response<String> response = new Response<>();
+        logger.debug("Searching cause list");
 
         try {
             String details = "";
@@ -694,10 +684,10 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             SimpleDateFormat dFormat = new SimpleDateFormat("yyyy-MM-dd");
             SimpleDateFormat dateFor = new SimpleDateFormat("dd MMMM yyyy");
 
-            List<SummonDto> summonDtoList = new ArrayList<SummonDto>();
+            List<SummonDto> summonDtoList = new ArrayList<>();
             List<Summons> summonsList = summonsService.searchSummons(billSearchDto);
 
-            if (summonsList.size() < 1) {
+            if (summonsList.isEmpty()) {
                 response.setData(null);
                 response.setCode(ResponseCode.NO_RECORD_FOUND);
                 response.setDescription("Record(s) Not Found");
@@ -726,8 +716,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
             JRBeanCollectionDataSource source = new JRBeanCollectionDataSource(summonDtoList);
 
-            File FileName = new File(".");
-            Map<String, Object> parameters = new HashMap<String, Object>();
+            Map<String, Object> parameters = new HashMap<>();
             parameters.put("coat", REPORT_IMG);
             parameters.put("details", details);
             parameters.put("dateFrom", dateFrom);
@@ -762,8 +751,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
             return response;
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("############### Exception Generation  Bill defaulters Reports ########" + e.getMessage());
+            logger.error("Exception generating cause list report", e);
             response.setData(null);
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("");
@@ -782,7 +770,7 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
 
     @Override
     public Response<String> getExcelAppealReport(List<Appeals> appealsList, String details) throws IOException {
-
+        Response<String> response = new Response<>();
         excelFileCreator.newReportExcel();
 
 
@@ -848,6 +836,9 @@ public class ReportsGeneratorServiceImpl implements ReportsGeneratorService {
                     appeal.getSummaryOfDecree().toUpperCase():"NO REMARKS",style);
         }
 
+
+        // Auto-size columns once after all data is written
+        excelFileCreator.autoSizeColumns(headers.length);
 
         // Convert the workbook to a byte array
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();

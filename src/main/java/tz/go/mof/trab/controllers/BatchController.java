@@ -124,7 +124,7 @@ public class BatchController {
         gepgMiddleWare.sendReconBatch(date);
 
         final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-        System.out.println("Cron Task :: Execution Time - {}" + dateTimeFormatter.format(LocalDateTime.now()));
+        reconcRequest.debug("Cron Task :: Execution Time - " + dateTimeFormatter.format(LocalDateTime.now()));
     }
 
 
@@ -201,7 +201,7 @@ public class BatchController {
                     for (ReconTransactionInfo info : responseWraper.getReconcillitionResponse().getReconcTrxInf()
                             .getReconcTrxInf()) {
 
-                        System.out.println("id: " + info.getSpBillId());
+                        reconcRequest.debug("id: " + info.getSpBillId());
                         Bill bill = billService.selectOneBill(info.getSpBillId());
 
                         if (info.getSpBillId() != null || !info.getSpBillId().isEmpty()) {
@@ -217,7 +217,7 @@ public class BatchController {
                             reconPayment.setPspName(info.getPspName());
                             reconPayment.setPyrCellNum(info.getDptCellNum());
                             reconPayment.setPyrName(info.getDptName());
-                            System.out.println("Bill id: " + Long.valueOf(info.getSpBillId().substring(4)));
+                            reconcRequest.debug("Bill id: " + Long.valueOf(info.getSpBillId().substring(4)));
 
                             reconPayment.setBill(bill);
 
@@ -228,7 +228,7 @@ public class BatchController {
 
                     }
                 } else {
-                    System.out.println("inside else");
+                    reconcRequest.debug("inside else - empty reconciliation transactions");
                 }
 
                 responseAck.setReconcStsCode("7101");
@@ -263,8 +263,7 @@ public class BatchController {
                 return null;
             }
         } catch (Exception e) {
-            System.out.println("System Errors");
-            e.printStackTrace();
+            reconcRequest.error("System error receiving reconciliation file", e);
             String responseString = "";
             return new ResponseEntity<Object>(responseString, HttpStatus.ACCEPTED);
 
@@ -285,19 +284,19 @@ public class BatchController {
 
         String newDate = data[2] + "-" + data[0] + "-" + data[1];
 
-        System.out.println("New Date is: " + newDate);
+        reconcRequest.debug("New Date is: " + newDate);
 
         List<ReconcPayment> reconcPayment = reconcPaymentService.getPaymentFromBatchDay(newDate.trim());
 
-        List<Map<String, Object>> payments = new ArrayList<Map<String, Object>>();
-        Map<String, Object> payment = new HashMap<String, Object>();
+        List<Map<String, Object>> payments = new ArrayList<>();
+        Map<String, Object> payment = new HashMap<>();
 
         if (reconcPayment != null && !reconcPayment.isEmpty()) {
 
 
             for (ReconcPayment reco : reconcPayment) {
 
-                payment = new HashMap<String, Object>();
+                payment = new HashMap<>();
 
                 payment.put("payid", reco.getPaymentId().toString());
                 payment.put("billAmt", reco.getBill().getBilledAmount().toString());
@@ -323,10 +322,10 @@ public class BatchController {
     public ResponseEntity<Resource> downloadSuccefullSummary(@PathParam("batch") String batch,
                                                              final RedirectAttributes redirectAttributes, Model model) {
 
-        System.out.println("batch: " + batch);
+        reconcRequest.debug("batch: " + batch);
         List<ReconcPayment> recoList = reconcPaymentService.getPaymentFromBatchDay("2020-05-28");
 
-        System.out.println("size: " + recoList.size());
+        reconcRequest.debug("size: " + recoList.size());
 
 
         String filename = "summary_of_" + batch + ".xlsx";
@@ -340,7 +339,7 @@ public class BatchController {
         String[] headers = {"paymet_id", "Psp Receipt", "Paid Amount", "Currency", "Mobile Number",
                 "Bill ControlNumber", "PaymentReference", "PaymentDate", "Psp Name"};
 
-        ArrayList<String> headersRow = new ArrayList<String>(Arrays.asList(headers));
+        ArrayList<String> headersRow = new ArrayList<>(Arrays.asList(headers));
         tempData.put(0, headersRow);
 
         int rowNumber = 1;
@@ -362,7 +361,7 @@ public class BatchController {
                 return ResponseEntity.ok().headers(httpHeaders).contentLength(file.length())
                         .contentType(MediaType.parseMediaType("application/excel")).body(resource);
             } catch (Exception e) {
-                e.printStackTrace();
+                reconcRequest.error("Error downloading successful summary", e);
                 return null;
             }
         }
@@ -406,7 +405,7 @@ public class BatchController {
     Date dateFromId(String date) throws ParseException {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         date = date.substring(0, 4) + "-" + date.substring(4, 6) + "-" + date.substring(6, 8);
-		System.out.println(sdf.parse(date));
+		reconcRequest.debug("Parsed date: " + sdf.parse(date));
         return sdf.parse(date);
     }
 

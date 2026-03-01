@@ -56,11 +56,10 @@ public class CustomSpringEventListener implements ApplicationListener < CustomSp
     @Override
     public void onApplicationEvent(CustomSpringEvent event) {
         try {
-            File FileName = new File(".");
             File file = new File(FILE_UPLOADED_PATH + event.getMessage());
             InputStream ExcelFileToRead = new FileInputStream(file.getPath());
 
-            logger.info("##### finding from listener ####### id: " + FilenameUtils.removeExtension(file.getName()));
+            logger.debug("Processing uploaded file: {}", FilenameUtils.removeExtension(file.getName()));
             UploadedFile uploadedFile = fileUploadService.findUploadedById(FilenameUtils.removeExtension(file.getName()));
             ColumnMapper columnMapper = columnMapperService.findMapperById(uploadedFile.getFileMapperId());
 
@@ -107,8 +106,7 @@ public class CustomSpringEventListener implements ApplicationListener < CustomSp
             globalMethods.publishToExchangeWithHeaders(reconOutExchange, reconOutRoutingKey, readable, mappingHeader);
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("###########" + e.getMessage());
+            logger.error("Error processing file event", e);
 
         }
     }

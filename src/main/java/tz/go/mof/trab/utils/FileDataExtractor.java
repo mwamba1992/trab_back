@@ -7,6 +7,8 @@ import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -17,6 +19,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 public class FileDataExtractor {
+
+	private static final Logger log = LoggerFactory.getLogger(FileDataExtractor.class);
 
 	public static HashMap<Integer, ArrayList<String>> storedFileData;
 	public static ArrayList<String> storedFile;
@@ -41,14 +45,12 @@ public class FileDataExtractor {
 				XSSFRow row = (XSSFRow) rows.next();
 
 				if (rowCount > 0) {
-					//System.out.println("\n");
 					Iterator<Cell> cells = row.cellIterator();
 
 					while (cells.hasNext()) {
 						Cell cell = cells.next();
 						String cellValue = dataFormatter.formatCellValue(cell);
 						rowData.add(cellValue);
-						//System.out.println(cellValue);
 					}
 					rowCounted = rowCount;
 					storedFileData.put(rowCount, rowData);
@@ -56,10 +58,9 @@ public class FileDataExtractor {
 				}
 				rowCount++;
 			}
-			// System.out.println("Stored File : " + storedFileData.toString());
 			return storedFileData;
 		} catch (IOException ex) {
-			ex.printStackTrace();
+			log.error("Error parsing Excel file", ex);
 			return null;
 		}
 	}
@@ -92,7 +93,7 @@ public class FileDataExtractor {
 		try {
 			fileOut = new FileOutputStream(file);
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			log.error("File not found for writing", e);
 			return false;
 		}
 		try {
@@ -100,7 +101,7 @@ public class FileDataExtractor {
 			fileOut.close();
 			return true;
 		} catch (IOException e) {
-			e.printStackTrace();
+			log.error("Error writing XLSX file", e);
 			return false;
 		}
 

@@ -67,7 +67,6 @@ public class ExcelFileCreator {
     }
 
     public void createCell(org.apache.poi.ss.usermodel.Row row, int columnCount, Object value, CellStyle style) {
-        sheet.autoSizeColumn(columnCount);
         org.apache.poi.ss.usermodel.Cell cell = row.createCell(columnCount);
         if (value instanceof Integer) {
             cell.setCellValue((Integer) value);
@@ -85,6 +84,12 @@ public class ExcelFileCreator {
             cell.setCellValue((String) value);
         }
         cell.setCellStyle(style);
+    }
+
+    public void autoSizeColumns(int columnCount) {
+        for (int i = 0; i < columnCount; i++) {
+            sheet.autoSizeColumn(i);
+        }
     }
 
     public CellStyle getFontContentExcel() {

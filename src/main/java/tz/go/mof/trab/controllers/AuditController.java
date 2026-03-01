@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import tz.go.mof.trab.models.*;
 import tz.go.mof.trab.repositories.BillRepository;
 import tz.go.mof.trab.service.GfsServiceImpl;
+import tz.go.mof.trab.dto.audit.AuditLogFilterDto;
 import tz.go.mof.trab.utils.TrabHelper;
 import javax.persistence.EntityManagerFactory;
 import java.util.ArrayList;
@@ -36,17 +37,17 @@ public class AuditController {
 
     @PostMapping(produces = "application/json", path = "/audit/logs")
     @ResponseBody
-    public List<Map<String, Object>> fetchAuditLogs(@RequestBody Map<String, String> req) {
+    public List<Map<String, Object>> fetchAuditLogs(@RequestBody AuditLogFilterDto req) {
         List<Map<String, Object>> response = new ArrayList<>();
         Map<String, Object> map  = new HashMap<>();
 
 
         logger.info("###### Audit Logs #########");
-        TrabHelper.print(req);
+        logger.debug("AuditLogFilter: {}", req);
 
-        String table = req.get("table");
-        String dateFrom  = req.get("dateFrom");
-        String dateTo = req.get("dateTo");
+        String table = req.getTable();
+        String dateFrom  = req.getDateFrom();
+        String dateTo = req.getDateTo();
         AuditReader reader = AuditReaderFactory.get(factory.createEntityManager());
 
         switch (table){
@@ -58,7 +59,7 @@ public class AuditController {
                 List<Gfs> gfsList= query.getResultList();
 
                 for (Gfs gfs: gfsList){
-                    map = new HashMap<String, Object>();
+                    map = new HashMap<>();
                     map.put("id", gfs.getId());
                     map.put("name", gfs.getGfsName());
                     map.put("code", gfs.getGfsCode());
@@ -85,7 +86,7 @@ public class AuditController {
 
                 List<Fees> fees = revenueQuery.getResultList();
                 for (Fees fee: fees){
-                    map = new HashMap<String, Object>();
+                    map = new HashMap<>();
                     map.put("id", fee.getId());
                     map.put("name", fee.getRevenueName());
                     map.put("code", fee.getAmount());

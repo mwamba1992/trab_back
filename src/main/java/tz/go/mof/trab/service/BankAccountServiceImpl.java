@@ -31,10 +31,6 @@ public class BankAccountServiceImpl implements BankAccountService{
 
     private static final Logger logger = LoggerFactory.getLogger(BankAccountServiceImpl.class);
 
-    Response<BankAccount> response = new Response<BankAccount>();
-
-    ListResponse<BankAccount> responseList = new ListResponse<BankAccount>();
-
     @Override
     public BankAccount findById(String accountId) {
         return bankAccountRepository.findById(accountId).get();
@@ -42,8 +38,9 @@ public class BankAccountServiceImpl implements BankAccountService{
 
     @Override
     public ListResponse<BankAccount> findAllBankAccounts() {
+        ListResponse<BankAccount> responseList = new ListResponse<>();
         List<BankAccount> bankAccounts = (List<BankAccount>) bankAccountRepository.findAll();
-        if (bankAccounts.size() < 1) {
+        if (bankAccounts.isEmpty()) {
             responseList.setCode(ResponseCode.NO_RECORD_FOUND);
             responseList.setStatus(false);
             responseList.setData(null);
@@ -58,9 +55,11 @@ public class BankAccountServiceImpl implements BankAccountService{
 
     @Override
     public Response<BankAccount> getOneBankAccount(String accountId) {
-        if (bankAccountRepository.findById(accountId).get() != null) {
+        Response<BankAccount> response = new Response<>();
+        BankAccount account = bankAccountRepository.findById(accountId).orElse(null);
+        if (account != null) {
             response.setCode(ResponseCode.SUCCESS);
-            response.setData(bankAccountRepository.findById(accountId).get());
+            response.setData(account);
             response.setDescription("SUCCESS");
             response.setStatus(true);
         } else {
@@ -73,12 +72,12 @@ public class BankAccountServiceImpl implements BankAccountService{
 
     @Override
     public Response<BankAccount> saveBankAccount(BankAccountDto bankAccountDto) {
+        Response<BankAccount> response = new Response<>();
         try {
             if (bankAccountRepository.findByAccountNumber(bankAccountDto.getAccountNumber()) == null) {
                 BankAccount bankAccount = new BankAccount();
                 TrabHelper.copyNonNullProperties(bankAccountDto, bankAccount);
 
-                response.setCode(ResponseCode.SUCCESS);
                 bankAccount.setCreatedBy(loggedUser.getInfo().getId());
                 bankAccount.setCurrency(currencyService.findByCurrencyShortName(bankAccountDto.getCcyId()));
                 response.setCode(ResponseCode.SUCCESS);
@@ -93,7 +92,7 @@ public class BankAccountServiceImpl implements BankAccountService{
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error saving bank account", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
             response.setDescription("FAILURE");
@@ -105,9 +104,10 @@ public class BankAccountServiceImpl implements BankAccountService{
 
     @Override
     public Response<BankAccount> editBankAccounts(BankAccountDto bankAccountDto, String accId) {
+        Response<BankAccount> response = new Response<>();
         try {
-            if (bankAccountRepository.findById(accId).get() != null) {
-                BankAccount bankAccount = bankAccountRepository.findById(accId).get();
+            BankAccount bankAccount = bankAccountRepository.findById(accId).orElse(null);
+            if (bankAccount != null) {
                 TrabHelper.copyNonNullProperties(bankAccountDto, bankAccount);
 
                 bankAccount.setUpdatedAt(LocalDateTime.now());
@@ -121,14 +121,14 @@ public class BankAccountServiceImpl implements BankAccountService{
             } else {
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Error! Updating BankAccount");
+                response.setDescription("Error updating bank account");
                 response.setStatus(false);
             }
 
         } catch (Exception e) {
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("BankAccount! Not Found");
+            response.setDescription("Bank account not found");
             response.setStatus(false);
         }
         return response;
@@ -136,6 +136,7 @@ public class BankAccountServiceImpl implements BankAccountService{
 
     @Override
     public Response<BankAccount> deleteBankAccount(String accId) {
+        Response<BankAccount> response = new Response<>();
         try {
             BankAccount bankAccount = bankAccountRepository.findById(accId).get();
             bankAccountRepository.delete(bankAccount);
@@ -145,10 +146,10 @@ public class BankAccountServiceImpl implements BankAccountService{
             response.setStatus(true);
 
         }catch (Exception e){
-            logger.error("########" + e.getMessage() + "###########");
+            logger.error("Error deleting bank account", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("BankAccount! Could Not be Deleted");
+            response.setDescription("Bank account could not be deleted");
             response.setStatus(false);
         }
 
@@ -157,7 +158,7 @@ public class BankAccountServiceImpl implements BankAccountService{
 
     @Override
     public Response<BankAccount> changeAccountStatus(String accountId, boolean status) {
-
+        Response<BankAccount> response = new Response<>();
         try{
 
             BankAccount bankAccount = bankAccountRepository.findById(accountId).get();
@@ -170,10 +171,10 @@ public class BankAccountServiceImpl implements BankAccountService{
 
 
         }catch (Exception e){
-            logger.error("########" + e.getMessage() + "###########");
+            logger.error("Error changing bank account status", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("BankAccount! Could Not be Status Changed");
+            response.setDescription("Bank account status could not be changed");
             response.setStatus(false);
         }
         return response;

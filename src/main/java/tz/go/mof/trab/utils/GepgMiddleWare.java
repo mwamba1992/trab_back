@@ -118,7 +118,7 @@ public class GepgMiddleWare {
 
             List<BillItems> billItemList = billItemRepository.getBillItemOfTheSameBill(bill.getBillId());
 
-            if (billItemList.size() > 0) {
+            if (!billItemList.isEmpty()) {
                 billItemList.forEach(item -> {
                     BillItemMapperDto billItemMapper = new BillItemMapperDto();
                     billItemMapper.setBillItemReference("TRAB-" + item.getBillItemRefId());
@@ -159,8 +159,6 @@ public class GepgMiddleWare {
 
 
                 billLogger.info("####### Bill Request to Gepg  ######" + globalMethods.beautifyXmlString(contentSentToGepg));
-                System.out.println("#### request to gepg #####");
-                System.out.println(globalMethods.beautifyXmlString(contentSentToGepg));
 
                 String response;
 
@@ -176,7 +174,6 @@ public class GepgMiddleWare {
                             contentSentToGepg, "AXML", "AXML", hashtable);
 
                     billLogger.info("####### Response From Gepg ######" + globalMethods.beautifyXmlString(response));
-                    System.out.println(globalMethods.beautifyXmlString(response));
 
                     billAck = (BillAckWrapper) globalMethods
                             .convertStringToXml(JAXBContext.newInstance(BillAckWrapper.class), response);
@@ -186,7 +183,7 @@ public class GepgMiddleWare {
 
                     return billAck.getBillAckCode().getTrxStsCode().equals("7101");
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    billLogger.error("Error sending bill to GePG", e);
                     return false;
 
                 }
@@ -198,7 +195,7 @@ public class GepgMiddleWare {
 
 
         } catch (Exception e) {
-            e.printStackTrace();
+            billLogger.error("Error in sendRequestToGepg", e);
             return false;
         }
 
@@ -323,7 +320,7 @@ public class GepgMiddleWare {
                 hashtable.put("Gepg-Com", gepgComm);
                 hashtable.put("Gepg-Code", spCode);
 
-                System.out.println("######## Maps #######" + hashtable);
+                billLogger.debug("Maps: " + hashtable);
 
                 responseString = globalMethods.connectToAnotherSystem(gepgUrl + "api/bill/sigcancel_request",
                         requestString, "AXML", "AXML", hashtable);
@@ -341,8 +338,7 @@ public class GepgMiddleWare {
                     return false;
                 }
             } catch (Exception e) {
-                billLogger.error("############" + e.getMessage());
-                e.printStackTrace();
+                billLogger.error("Error sending cancel request", e);
                 return false;
             }
         }
@@ -356,7 +352,7 @@ public class GepgMiddleWare {
         ReconcillitionRequest request = new ReconcillitionRequest();
         ReconcillitionRequestWrapper requestWrapper = new ReconcillitionRequestWrapper();
 
-        System.out.println("date is: " + date);
+        reconcRequest.debug("date is: " + date);
         request.setSpCode(spcode);
         request.setSpSysId(systemId);
         request.setSpReconcReqId(date.replaceAll("-", "") +
@@ -384,9 +380,6 @@ public class GepgMiddleWare {
             requestString = globalMethods
                     .convertXmlToString(JAXBContext.newInstance(ReconcillitionRequestWrapper.class), requestWrapper);
 
-            System.out.println(globalMethods.beautifyXmlString(requestString));
-
-
             reconcRequest.info("##### Reconciliation Request ######### " + globalMethods.beautifyXmlString(requestString));
 
             String responseString = "";
@@ -399,10 +392,7 @@ public class GepgMiddleWare {
                 responseString = globalMethods.connectToAnotherSystem(gepgUrl + "api/reconciliations/sig_sp_qrequest",
                         requestString, "AXML", "AXML", hashtable);
 
-                System.out.println("Response: " + globalMethods.beautifyXmlString((responseString)));
-
-                reconcRequest
-                        .info("########  Response From Recon Request is ############# " + globalMethods.beautifyXmlString(responseString));
+                reconcRequest.info("########  Response From Recon Request is ############# " + globalMethods.beautifyXmlString(responseString));
 
                 requestWrapper = (ReconcillitionRequestWrapper) globalMethods.convertStringToXml(
                         JAXBContext.newInstance(ReconcillitionRequestWrapper.class), responseString);

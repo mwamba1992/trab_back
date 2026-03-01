@@ -3,7 +3,6 @@ package tz.go.mof.trab.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tz.go.mof.trab.config.userextractor.LoggedUser;
 import tz.go.mof.trab.dto.payment.ReconBatchDto;
@@ -21,13 +20,9 @@ import java.util.Map;
 @Transactional
 public class BatchReconServiceImpl implements BatchReconService {
 
-    private static final Logger logger = LoggerFactory.getLogger(FeesServiceImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(BatchReconServiceImpl.class);
 
     private final ReconBatchRepository reconBatchRepository;
-
-    Response<ReconBatch> response = new Response<ReconBatch>();
-
-    ListResponse<ReconBatch> reconBatchListResponse = new ListResponse<ReconBatch>();
 
     private final LoggedUser loggedUser;
 
@@ -46,10 +41,11 @@ public class BatchReconServiceImpl implements BatchReconService {
 
     @Override
     public ListResponse<ReconBatch> findAllBatch() {
+        ListResponse<ReconBatch> reconBatchListResponse = new ListResponse<>();
         List<ReconBatch> batches = (List<ReconBatch>) reconBatchRepository.findAll();
 
 
-        if (batches.size() < 1) {
+        if (batches.isEmpty()) {
             reconBatchListResponse.setCode(ResponseCode.NO_RECORD_FOUND);
             reconBatchListResponse.setStatus(false);
             reconBatchListResponse.setData(null);
@@ -69,15 +65,14 @@ public class BatchReconServiceImpl implements BatchReconService {
 
     @Override
     public Response<ReconBatch> saveBatch(ReconBatchDto reconBatchDto) {
-        logger.info("########## Req ##########" + reconBatchDto);
-
+        Response<ReconBatch> response = new Response<>();
+        logger.debug("Saving recon batch: {}", reconBatchDto);
 
         try {
 
             ReconBatch reconBatch = new ReconBatch();
             TrabHelper.copyNonNullProperties(reconBatchDto, reconBatch);
 
-            response.setCode(ResponseCode.SUCCESS);
             reconBatch.setCreatedBy(loggedUser.getInfo().getId());
             response.setData(reconBatchRepository.save(reconBatch));
             response.setCode(ResponseCode.SUCCESS);
@@ -86,7 +81,7 @@ public class BatchReconServiceImpl implements BatchReconService {
 
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error saving recon batch", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
             response.setDescription("FAILURE");
@@ -98,9 +93,10 @@ public class BatchReconServiceImpl implements BatchReconService {
 
     @Override
     public Response<ReconBatch> editBatch(ReconBatchDto reconBatchDto, String batchId) {
+        Response<ReconBatch> response = new Response<>();
         try {
-            if (reconBatchRepository.findById(batchId).get() != null) {
-                ReconBatch batch = reconBatchRepository.findById(batchId).get();
+            ReconBatch batch = reconBatchRepository.findById(batchId).orElse(null);
+            if (batch != null) {
                 TrabHelper.copyNonNullProperties(reconBatchDto, batch);
 
                 batch.setUpdatedAt(LocalDateTime.now());
@@ -113,14 +109,14 @@ public class BatchReconServiceImpl implements BatchReconService {
             } else {
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Error! Updating Currency");
+                response.setDescription("Error updating recon batch");
                 response.setStatus(false);
             }
 
         } catch (Exception e) {
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Not Found");
+            response.setDescription("Recon batch not found");
             response.setStatus(false);
         }
         return response;
@@ -128,6 +124,7 @@ public class BatchReconServiceImpl implements BatchReconService {
 
     @Override
     public Response<ReconBatch> deleteBatch(String batchId) {
+        Response<ReconBatch> response = new Response<>();
         try {
             ReconBatch batch = reconBatchRepository.findById(batchId).get();
             batch.setDeleted(true);
@@ -142,10 +139,10 @@ public class BatchReconServiceImpl implements BatchReconService {
             response.setStatus(true);
 
         } catch (Exception e) {
-            logger.error("########" + e.getMessage() + "###########");
+            logger.error("Error deleting recon batch", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Recon Batch! Could Not be Deleted");
+            response.setDescription("Recon batch could not be deleted");
             response.setStatus(false);
         }
 
@@ -153,8 +150,8 @@ public class BatchReconServiceImpl implements BatchReconService {
     }
 
     @Override
-    public Response createReconManually(Map<String, String> req) {
-        Response response = new Response();
+    public Response<?> createReconManually(Map<String, String> req) {
+        Response<Void> response = new Response<>();
         String date = req.get("date").split("T")[0];
 
         try {

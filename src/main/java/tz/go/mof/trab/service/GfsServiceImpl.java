@@ -28,11 +28,6 @@ public class GfsServiceImpl implements GfsService {
 
     private static final Logger logger = LoggerFactory.getLogger(GfsServiceImpl.class);
 
-
-    Response<Gfs> response = new Response<Gfs>();
-
-    ListResponse<Gfs> responseList = new ListResponse<Gfs>();
-
     @Autowired
     private GfsRepository gfsRepository;
 
@@ -43,9 +38,10 @@ public class GfsServiceImpl implements GfsService {
 
     @Override
     public ListResponse<Gfs> findAllGfs() {
+        ListResponse<Gfs> responseList = new ListResponse<>();
         logger.info(loggedUser.getInfo().toString());
         List<Gfs> gfsList = gfsRepository.findByActiveTrue();
-        if (gfsList.size() < 1) {
+        if (gfsList.isEmpty()) {
             responseList.setCode(ResponseCode.NO_RECORD_FOUND);
             responseList.setStatus(false);
             responseList.setData(null);
@@ -60,9 +56,9 @@ public class GfsServiceImpl implements GfsService {
 
     @Override
     public Response<Gfs> getOneGfs(String gsfId) {
-        gfsRepository.findById(gsfId).get();
-        response.setCode(ResponseCode.SUCCESS);
+        Response<Gfs> response = new Response<>();
         response.setData(gfsRepository.findById(gsfId).get());
+        response.setCode(ResponseCode.SUCCESS);
         response.setDescription("SUCCESS");
         response.setStatus(true);
         return response;
@@ -70,12 +66,12 @@ public class GfsServiceImpl implements GfsService {
 
     @Override
     public Response<Gfs> saveGfs(GfsDto gfsDto) {
+        Response<Gfs> response = new Response<>();
         try {
             if (gfsRepository.findByGfsCodeAndActiveTrueAndDeletedFalse(gfsDto.getGfsCode()) == null) {
                 Gfs gfs = new Gfs();
                 TrabHelper.copyNonNullProperties(gfsDto, gfs);
 
-                response.setCode(ResponseCode.SUCCESS);
                 gfs.setCreatedBy(loggedUser.getInfo().getName());
                 gfs.setAction("1");
                 response.setData(gfsRepository.save(gfs));
@@ -90,7 +86,7 @@ public class GfsServiceImpl implements GfsService {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error saving GFS", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
             response.setDescription("FAILURE");
@@ -102,9 +98,10 @@ public class GfsServiceImpl implements GfsService {
 
     @Override
     public Response<Gfs> editGfs(GfsDto gfsDto, String gsfId) {
+        Response<Gfs> response = new Response<>();
         try {
-            if (gfsRepository.findById(gsfId).get() != null) {
-                Gfs gfs = gfsRepository.findById(gsfId).get();
+            Gfs gfs = gfsRepository.findById(gsfId).orElse(null);
+            if (gfs != null) {
                 TrabHelper.copyNonNullProperties(gfsDto, gfs);
 
                 gfs.setUpdatedAt(LocalDateTime.now());
@@ -118,14 +115,14 @@ public class GfsServiceImpl implements GfsService {
             } else {
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Error! Updating Currency");
+                response.setDescription("Error updating GFS");
                 response.setStatus(false);
             }
 
         } catch (Exception e) {
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Not Found");
+            response.setDescription("GFS not found");
             response.setStatus(false);
         }
         return response;
@@ -133,6 +130,7 @@ public class GfsServiceImpl implements GfsService {
 
     @Override
     public Response<Gfs> deleteGfs(String gsfId) {
+        Response<Gfs> response = new Response<>();
         try {
             Gfs gfs = gfsRepository.findById(gsfId).get();
             gfs.setDeleted(true);
@@ -148,10 +146,10 @@ public class GfsServiceImpl implements GfsService {
             response.setStatus(true);
 
         }catch (Exception e){
-            logger.error("#########"+ e.getMessage() + "############");
+            logger.error("Error deleting GFS", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Could Not be Deleted");
+            response.setDescription("GFS could not be deleted");
             response.setStatus(false);
         }
 

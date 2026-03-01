@@ -112,10 +112,10 @@ public class GovEsbHelper {
                 throw new Exception("Could not get access token from esb");
             }
 
-            System.out.println("Token response: " + tokenResponse);
+            log.debug("Token response: {}", tokenResponse);
             return tokenResponse;
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Error getting access token", ex);
             throw ex;
         }
     }
@@ -143,9 +143,9 @@ public class GovEsbHelper {
                            String nidaUserId, String esbRequestUrl, HashMap<String, String> headers) throws Exception {
         this.initializeRequest(apiCode, requestBody, format);
         String esbRequestBody = this.createEsbRequest(isPushRequest, nidaUserId);
-        System.out.println("Request to GovESB: " + esbRequestBody);
+        log.debug("Request to GovESB: {}", esbRequestBody);
         String esbResponse = this.sendEsbRequest(esbRequestBody, esbRequestUrl, headers);
-        System.out.println("GovESB Response: " + esbResponse);
+        log.debug("GovESB Response: {}", esbResponse);
         return this.verifyThenReturnData(esbResponse, this.format);
     }
 
@@ -161,7 +161,7 @@ public class GovEsbHelper {
         try {
             return this.esbResponse(false, requestBody, message, format, false);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error creating failure response", e);
             return null;
         }
     }
@@ -236,7 +236,7 @@ public class GovEsbHelper {
 
         boolean isValid = this.verifyPayloadECC(data, signature);
         if (!isValid) {
-            System.out.println("Signature verification failed!");
+            log.warn("Signature verification failed!");
         }
         return data;
     }
@@ -270,9 +270,9 @@ public class GovEsbHelper {
 
             HttpResponse response = httpClient.execute(request);
             esbResponse = EntityUtils.toString(response.getEntity(), "UTF-8");
-            System.out.println("Response from GovESB: " + esbResponse);
+            log.debug("Response from GovESB: {}", esbResponse);
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Error sending ESB request", ex);
         }
         return esbResponse;
     }
@@ -341,7 +341,7 @@ public class GovEsbHelper {
             ecdsaVerifySignature.update(data.getBytes(StandardCharsets.UTF_8));
             return ecdsaVerifySignature.verify(Base64.getMimeDecoder().decode(signature));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error verifying ECC signature", e);
             return false;
         }
     }

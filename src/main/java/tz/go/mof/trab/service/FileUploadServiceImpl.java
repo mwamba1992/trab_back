@@ -45,7 +45,7 @@ public class FileUploadServiceImpl implements FileUploadService {
 
     @Override
     public Response storeFile(MultipartFile file, FileDetailsDto fileDetailsDto) {
-        Response response = new Response();
+        Response<?> response = new Response<>();
         UploadedFile uploadedFile = new UploadedFile();
         try {
             if (!file.isEmpty()) {
@@ -59,15 +59,13 @@ public class FileUploadServiceImpl implements FileUploadService {
                     uploadedFile.setUploadedFileType(extension);
                     uploadedFile.setFileMapperId(fileDetailsDto.getMappingId());
 
-                    File FileName = new File(".");
-
                     UploadedFile savedUploadedFile = save(uploadedFile);
                     File fileInResource = new File(FILE_UPLOADED_PATH, savedUploadedFile.getFileId() + "." + extension);
 
                     Files.copy(file.getInputStream(), fileInResource.toPath());
 
                     customSpringEventPublisher.doStuffAndPublishAnEvent(savedUploadedFile.getFileId() + "." + extension);
-                    System.out.println("##### Publishing  #####");
+                    logger.debug("Publishing file upload event");
                     response.setStatus(true);
                     response.setDescription("SUCCESS");
                     response.setCode(ResponseCode.SUCCESS);
@@ -83,8 +81,7 @@ public class FileUploadServiceImpl implements FileUploadService {
                 response.setCode(ResponseCode.FAILURE);
             }
         } catch (Exception e) {
-            logger.error(e.getMessage());
-            e.printStackTrace();
+            logger.error("Error storing file", e);
             response.setCode(ResponseCode.FAILURE);
             response.setStatus(false);
         }
@@ -124,32 +121,23 @@ public class FileUploadServiceImpl implements FileUploadService {
 
     @Override
     public Response getReportByFileId(String format, String fileId) {
-        Response response = new Response();
+        Response<String> response = new Response<>();
         String fileReport = "";
         try {
-            if (format.equalsIgnoreCase("pdf")) {
-                File FileName = new File(".");
-                fileReport = FILE_UPLOADED_PATH +
-                        fileId + "_report" + "." + "csv";
-
-            }
-            if (format.equalsIgnoreCase("csv")) {
-                File FileName = new File(".");
-                fileReport = FILE_UPLOADED_PATH +
-                        fileId + "_report" + "." + "csv";
-
+            if (format.equalsIgnoreCase("pdf") || format.equalsIgnoreCase("csv")) {
+                fileReport = FILE_UPLOADED_PATH + fileId + "_report.csv";
             }
 
             File fileToRead = new File(fileReport);
             byte[] fileContent = FileUtils.readFileToByteArray(fileToRead);
             String contentToSend = Base64.getEncoder().encodeToString(fileContent);
 
-            logger.info("##### BASE 64 #####" + contentToSend);
+            logger.debug("Generated base64 content for report");
             response.setData(contentToSend);
             response.setCode(ResponseCode.SUCCESS);
             response.setStatus(true);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Error getting report by file id", e);
             response.setStatus(false);
             response.setCode(ResponseCode.FAILURE);
         }

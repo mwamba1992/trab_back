@@ -21,12 +21,7 @@ import java.util.List;
 @Transactional
 public class AppealStatusTrendServiceImpl implements AppealStatusTrendService {
 
-
-
     private static final Logger logger = LoggerFactory.getLogger(AppealStatusTrendServiceImpl.class);
-
-    Response<AppealStatusTrend> response = new Response<>();
-    ListResponse<AppealStatusTrend> responseList = new ListResponse<>();
 
     private AppealStatusTrendRepository appealStatusTrendRepository;
 
@@ -45,8 +40,9 @@ public class AppealStatusTrendServiceImpl implements AppealStatusTrendService {
 
     @Override
     public ListResponse<AppealStatusTrend> findAllStatusTrend() {
+        ListResponse<AppealStatusTrend> responseList = new ListResponse<>();
         List<AppealStatusTrend> appealStatusTrends = appealStatusTrendRepository.findAllByOrderByAppealStatusTrendNameAsc();
-        if (appealStatusTrends.size() < 1) {
+        if (appealStatusTrends.isEmpty()) {
             responseList.setCode(ResponseCode.NO_RECORD_FOUND);
             responseList.setStatus(false);
             responseList.setData(null);
@@ -61,9 +57,11 @@ public class AppealStatusTrendServiceImpl implements AppealStatusTrendService {
 
     @Override
     public Response<AppealStatusTrend> getOneStatusTrend(String trendId) {
-        if (appealStatusTrendRepository.findById(trendId).get() != null) {
+        Response<AppealStatusTrend> response = new Response<>();
+        AppealStatusTrend trend = appealStatusTrendRepository.findById(trendId).orElse(null);
+        if (trend != null) {
             response.setCode(ResponseCode.SUCCESS);
-            response.setData(appealStatusTrendRepository.findById(trendId).get());
+            response.setData(trend);
             response.setDescription("SUCCESS");
             response.setStatus(true);
         } else {
@@ -76,12 +74,12 @@ public class AppealStatusTrendServiceImpl implements AppealStatusTrendService {
 
     @Override
     public Response<AppealStatusTrend> saveStatusTrend(AppealStatusTrendDto appealStatusTrendDto) {
+        Response<AppealStatusTrend> response = new Response<>();
         try {
 
                 AppealStatusTrend appealStatusTrend = new AppealStatusTrend();
                 TrabHelper.copyNonNullProperties(appealStatusTrendDto, appealStatusTrend);
 
-                response.setCode(ResponseCode.SUCCESS);
                 appealStatusTrend.setCreatedBy(loggedUser.getInfo().getName());
                 response.setCode(ResponseCode.SUCCESS);
                 response.setData(appealStatusTrendRepository.save(appealStatusTrend));
@@ -89,7 +87,7 @@ public class AppealStatusTrendServiceImpl implements AppealStatusTrendService {
                 response.setStatus(true);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error saving appeal status trend", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
             response.setDescription("FAILURE");
@@ -101,10 +99,10 @@ public class AppealStatusTrendServiceImpl implements AppealStatusTrendService {
 
     @Override
     public Response<AppealStatusTrend> editStatusTrend(AppealStatusTrendDto appealStatusTrendDto, String trendId) {
-
+        Response<AppealStatusTrend> response = new Response<>();
         try {
-            if (appealStatusTrendRepository.findById(trendId).get() != null) {
-                AppealStatusTrend appealStatusTrend = appealStatusTrendRepository.findById(trendId).get();
+            AppealStatusTrend appealStatusTrend = appealStatusTrendRepository.findById(trendId).orElse(null);
+            if (appealStatusTrend != null) {
                 TrabHelper.copyNonNullProperties(appealStatusTrendDto, appealStatusTrend);
 
                 appealStatusTrend.setUpdatedAt(LocalDateTime.now());
@@ -117,14 +115,14 @@ public class AppealStatusTrendServiceImpl implements AppealStatusTrendService {
             } else {
                 response.setCode(ResponseCode.FAILURE);
                 response.setData(null);
-                response.setDescription("Error! Updating Appeal Status Trends");
+                response.setDescription("Error updating appeal status trend");
                 response.setStatus(false);
             }
 
         } catch (Exception e) {
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Appeal Status Trend! Not Found");
+            response.setDescription("Appeal status trend not found");
             response.setStatus(false);
         }
         return response;
@@ -132,6 +130,7 @@ public class AppealStatusTrendServiceImpl implements AppealStatusTrendService {
 
     @Override
     public Response<AppealStatusTrend> deleteStatusTrend(String trendId) {
+        Response<AppealStatusTrend> response = new Response<>();
         try {
             AppealStatusTrend appealStatusTrend = appealStatusTrendRepository.findById(trendId).get();
             appealStatusTrend.setDeleted(true);
@@ -146,10 +145,10 @@ public class AppealStatusTrendServiceImpl implements AppealStatusTrendService {
             response.setStatus(true);
 
         }catch (Exception e){
-            logger.error("########" + e.getMessage() + "###########");
+            logger.error("Error deleting appeal status trend", e);
             response.setCode(ResponseCode.FAILURE);
             response.setData(null);
-            response.setDescription("Currency! Could Not be Deleted");
+            response.setDescription("Appeal status trend could not be deleted");
             response.setStatus(false);
         }
 

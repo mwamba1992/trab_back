@@ -39,9 +39,6 @@ import java.util.stream.Collectors;
 @RequestMapping("/api")
 public class ReportController {
 
-
-    public Response<String> response = new Response<String>();
-
     @Autowired
     private ReportsGeneratorService reportsGeneratorService;
 
@@ -86,6 +83,7 @@ public class ReportController {
     @GetMapping("/format/{format}/payment/payment-id/{paymentId}")
     @ResponseBody
     public Response<String> paymentReceipt(@PathVariable("paymentId") String paymentId) {
+        Response<String> response = new Response<>();
         Payment payment = paymentRepository.findById(paymentId).get();
         ReportResponseDto reportResponseDto = new ReportResponseDto();
         try {
@@ -100,7 +98,7 @@ public class ReportController {
 
             PaymentReportDto reportDto = globalMethods.getPaymentReportDto(payment);
 
-            List<PaymentReportDto> paymentReport = new ArrayList<PaymentReportDto>();
+            List<PaymentReportDto> paymentReport = new ArrayList<>();
             paymentReport.add(reportDto);
 
             File file = new File(REPORT_DESIGN_PATH + "payment_item_sub_report.jrxml");
@@ -133,7 +131,7 @@ public class ReportController {
             );
 
             JRDataSource reportDataSource = new JRBeanCollectionDataSource(paymentReport);
-            Map<String, Object> parameters = new HashMap<String, Object>();
+            Map<String, Object> parameters = new HashMap<>();
             parameters.put("coat", REPORT_IMG);
             parameters.put("paymentSubreport", paymentSubreport);
             parameters.put("billItems", newBillItemsReportDtos);
@@ -156,7 +154,7 @@ public class ReportController {
             return response;
         } catch (Exception e) {
 
-            e.printStackTrace();
+            reportLogger.error("Error generating payment receipt", e);
             response.setData(null);
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("");
@@ -168,8 +166,7 @@ public class ReportController {
     @GetMapping("/format/{format}/bill/bill-id/{billId}")
     @ResponseBody
     public Response<String> billInvoice(@PathVariable("format") String format, @PathVariable("billId") String billId) {
-
-        // TODO Auto-generated method stub
+        Response<String> response = new Response<>();
         ReportResponseDto reportResponseDto = new ReportResponseDto();
         Bill bill = billRepository.selectOneBill(billId);
         try {
@@ -183,14 +180,14 @@ public class ReportController {
                 return response;
             }
             if (bill.getBillControlNumber().equalsIgnoreCase("0")) {
-                System.out.println("######### inside controlnumber 0 ############");
+                reportLogger.debug("inside controlnumber 0");
                 response.setData(null);
                 response.setCode(ResponseCode.FAILURE);
                 response.setDescription(getResponseCode((bill.getResponseCode())));
                 response.setStatus(true);
                 return response;
             }
-            List<BillReportDto> billReport = new ArrayList<BillReportDto>();
+            List<BillReportDto> billReport = new ArrayList<>();
             billReport.add(reportDto);
 
             ObjectMapper mapper = new ObjectMapper();
@@ -229,7 +226,7 @@ public class ReportController {
             JRDataSource reportDataSource = new JRBeanCollectionDataSource(billReport);
 
 
-            Map<String, Object> parameters = new HashMap<String, Object>();
+            Map<String, Object> parameters = new HashMap<>();
             parameters.put("billSubreport", billSubreport);
             parameters.put("billItems", newBillItemsReportDtos);
             parameters.put("coat", REPORT_IMG);
@@ -251,7 +248,7 @@ public class ReportController {
             response.setCode(ResponseCode.SUCCESS);
             return response;
         } catch (Exception e) {
-            e.printStackTrace();
+            reportLogger.error("Error generating bill invoice", e);
             response.setData(null);
             response.setCode(ResponseCode.FAILURE);
             response.setDescription(getResponseCode((bill.getResponseCode())));
@@ -262,10 +259,9 @@ public class ReportController {
 
     @PostMapping("/bills-dynamic/")
     @ResponseBody
-    public ReportResponseDto bills(@RequestBody Map<String, String> request) throws JRException, IOException, ParseException {
+    public ReportResponseDto bills(@RequestBody BillDynamicDto request) throws JRException, IOException, ParseException {
 
-        System.out.println("################" + request);
-        // TODO Auto-generated method stub
+        reportLogger.debug("Bills request: " + request);
         ReportResponseDto reportResponseDto = new ReportResponseDto();
         List<BillReportDto> billReportDtoList = new ArrayList<>();
         List<Bill> bills = globalMethods.findBills(request);
@@ -289,7 +285,7 @@ public class ReportController {
         File file = new File(REPORT_DESIGN_PATH + "test.jrxml");
         final JasperReport billSubreport = JasperCompileManager.compileReport(new FileInputStream(file));
 
-        Map<String, Object> parameters = new HashMap<String, Object>();
+        Map<String, Object> parameters = new HashMap<>();
         parameters.put("ItemDataSource", itemsJRBean);
         parameters.put("coat", REPORT_IMG);
 
@@ -305,7 +301,7 @@ public class ReportController {
         byte[] fileContent = FileUtils.readFileToByteArray(fileToRead);
         String contentToSend = Base64.getEncoder().encodeToString(fileContent);
 
-        System.out.println("######" + bills.size());
+        reportLogger.debug("Bills count: " + bills.size());
 
         if (bills.size() > 1) {
             reportResponseDto.setSuccess(true);
@@ -323,19 +319,19 @@ public class ReportController {
 
     @PostMapping("/applications-dynamic/format/{format}")
     @ResponseBody
-    public Response<String> applications(@RequestBody Map<String, String> request, @PathVariable("format") String format) {
-        System.out.println("################" + request);
+    public Response<String> applications(@RequestBody ApplicationFilterDto request, @PathVariable("format") String format) {
+        Response<String> response = new Response<>();
+        reportLogger.debug("Applications request: " + request);
 
         String dateFrom = "";
 
         try {
-            // TODO Auto-generated method stub
-            ReportResponseDto reportResponseDto = new ReportResponseDto();
+                ReportResponseDto reportResponseDto = new ReportResponseDto();
             List<ApplicationRegister> applicationRegisters = globalMethods.getApplications(request);
             reportResponseDto.setApplicationRegisters(applicationRegisters);
 
 
-            if (!(applicationRegisters.size() > 0)) {
+            if (applicationRegisters.isEmpty()) {
                 response.setData(null);
                 response.setCode(ResponseCode.NO_RECORD_FOUND);
                 response.setDescription("No Records Found");
@@ -358,20 +354,22 @@ public class ReportController {
                     applicationDto.setStatus(app.getStatusTrend().getApplicationStatusTrendName());
                     applicationDtos.add(applicationDto);
                 });
-                if (!request.get("dateFrom").isEmpty()) {
-                    dateFrom = "Date From: " + request.get("dateFrom");
+                String reqDateFrom = request.getDateFrom() != null ? request.getDateFrom() : "";
+                String reqDateTo = request.getDateTo() != null ? request.getDateTo() : "";
+                if (!reqDateFrom.isEmpty()) {
+                    dateFrom = "Date From: " + reqDateFrom;
                 }
-                if (!request.get("dateTo").isEmpty()) {
-                    dateFrom = "Date To: " + request.get("dateFrom");
+                if (!reqDateTo.isEmpty()) {
+                    dateFrom = "Date To: " + reqDateFrom;
                 }
-                if (!request.get("dateFrom").isEmpty() && !request.get("dateTo").isEmpty()) {
+                if (!reqDateFrom.isEmpty() && !reqDateTo.isEmpty()) {
                     dateFrom = "";
-                    dateFrom = "Date From: " + request.get("dateFrom") + " Date To: " + request.get("dateTo");
+                    dateFrom = "Date From: " + reqDateFrom + " Date To: " + reqDateTo;
                 }
 
                 //getting report and print
                 JRBeanCollectionDataSource itemsJRBean = new JRBeanCollectionDataSource(applicationDtos);
-                Map<String, Object> parameters = new HashMap<String, Object>();
+                Map<String, Object> parameters = new HashMap<>();
                 parameters.put("coat", REPORT_IMG);
                 parameters.put("dateFrom", dateFrom);
                 File billReportTemplate = new File(REPORT_DESIGN_PATH + "applications_trab.jrxml");
@@ -394,7 +392,7 @@ public class ReportController {
                 return response;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            reportLogger.error("Error generating applications report", e);
             response.setData(null);
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("");
@@ -406,32 +404,33 @@ public class ReportController {
 
     @PostMapping("/notices-dynamic/format/{format}")
     @ResponseBody
-    public Response<String> notices(@RequestBody Map<String, String> request, @PathVariable("format") String format) {
-        System.out.println("################" + request);
+    public Response<String> notices(@RequestBody NoticeFilterDto request, @PathVariable("format") String format) {
+        Response<String> response = new Response<>();
+        reportLogger.debug("Notices request: " + request);
 
         String dateFrom = "";
 
         try {
-            // TODO Auto-generated method stub
-            List<Notice> notices = globalMethods.getNotices(request);
-            List<NoticeDto> noticeDtos = new ArrayList<NoticeDto>();
-            if (!(notices.size() > 0)) {
+                List<Notice> notices = globalMethods.getNotices(request);
+            List<NoticeDto> noticeDtos = new ArrayList<>();
+            if (notices.isEmpty()) {
                 response.setData(null);
                 response.setCode(ResponseCode.NO_RECORD_FOUND);
                 response.setDescription("No Records Found");
                 response.setStatus(true);
                 return response;
             } else {
-
-                if (!request.get("dateFrom").isEmpty()) {
-                    dateFrom = "Date From: " + request.get("dateFrom");
+                String reqDateFrom = request.getDateFrom() != null ? request.getDateFrom() : "";
+                String reqDateTo = request.getDateTo() != null ? request.getDateTo() : "";
+                if (!reqDateFrom.isEmpty()) {
+                    dateFrom = "Date From: " + reqDateFrom;
                 }
-                if (!request.get("dateTo").isEmpty()) {
-                    dateFrom = "Date To: " + request.get("dateFrom");
+                if (!reqDateTo.isEmpty()) {
+                    dateFrom = "Date To: " + reqDateFrom;
                 }
-                if (!request.get("dateFrom").isEmpty() && !request.get("dateTo").isEmpty()) {
+                if (!reqDateFrom.isEmpty() && !reqDateTo.isEmpty()) {
                     dateFrom = "";
-                    dateFrom = "Date From: " + request.get("dateFrom") + " Date To: " + request.get("dateTo");
+                    dateFrom = "Date From: " + reqDateFrom + " Date To: " + reqDateTo;
                 }
 
                 notices.forEach(notice -> {
@@ -449,7 +448,7 @@ public class ReportController {
 
                 //getting report and print
                 JRBeanCollectionDataSource itemsJRBean = new JRBeanCollectionDataSource(noticeDtos);
-                Map<String, Object> parameters = new HashMap<String, Object>();
+                Map<String, Object> parameters = new HashMap<>();
                 parameters.put("coat", REPORT_IMG);
                 parameters.put("dateFrom", dateFrom);
                 File billReportTemplate = new File(REPORT_DESIGN_PATH + "notices.jrxml");
@@ -483,7 +482,7 @@ public class ReportController {
                 return response;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            reportLogger.error("Error generating notices report", e);
             response.setData(null);
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("");
@@ -495,21 +494,21 @@ public class ReportController {
 
     @PostMapping("/appeals-dynamic/format/{format}")
     @ResponseBody
-    public Response<String> appeals(@RequestBody Map<String, String> request, @PathVariable("format") String format) {
-
+    public Response<String> appeals(@RequestBody AppealFilterDto request, @PathVariable("format") String format) {
+        Response<String> response = new Response<>();
 
         String dateFrom = "";
         String  details = "";
 
         try {
-            List<AppealDto> appealDtos = new ArrayList<AppealDto>();
-            System.out.println("################" + request);
-            // TODO Auto-generated method stub
-            ReportResponseDto reportResponseDto = new ReportResponseDto();
+            List<AppealDto> appealDtos = new ArrayList<>();
+            reportLogger.debug("Appeals request: " + request);
+                ReportResponseDto reportResponseDto = new ReportResponseDto();
 
             List<Appeals> appeals;
 
-            if (request.get("isTribunal").equals("YES")) {
+            String isTribunal = request.getIsTribunal() != null ? request.getIsTribunal() : "";
+            if (isTribunal.equals("YES")) {
                 appeals = appealsRepository.findByIsFilledTratTrue();
             } else {
                 appeals = globalMethods.getAppeals(request);
@@ -517,7 +516,7 @@ public class ReportController {
 
             reportResponseDto.setAppeals(appeals);
 
-            if (!(appeals.size() > 0)) {
+            if (appeals.isEmpty()) {
                 response.setData(null);
                 response.setCode(ResponseCode.NO_RECORD_FOUND);
                 response.setDescription("No Records Found");
@@ -581,22 +580,24 @@ public class ReportController {
                     appealDtos.add(appealDto);
                 });
 
-                if (!request.get("dateFrom").isEmpty()) {
-                    dateFrom = "Date From: " + request.get("dateFrom");
+                String reqDateFrom = request.getDateFrom() != null ? request.getDateFrom() : "";
+                String reqDateTo = request.getDateTo() != null ? request.getDateTo() : "";
+                if (!reqDateFrom.isEmpty()) {
+                    dateFrom = "Date From: " + reqDateFrom;
                 }
-                if (!request.get("dateTo").isEmpty()) {
-                    dateFrom = "Date To: " + request.get("dateFrom");
+                if (!reqDateTo.isEmpty()) {
+                    dateFrom = "Date To: " + reqDateFrom;
                 }
-                if (!request.get("dateFrom").isEmpty() && !request.get("dateTo").isEmpty()) {
+                if (!reqDateFrom.isEmpty() && !reqDateTo.isEmpty()) {
                     dateFrom = "";
-                    dateFrom = "Date From: " + request.get("dateFrom") + " Date To: " + request.get("dateTo");
+                    dateFrom = "Date From: " + reqDateFrom + " Date To: " + reqDateTo;
                 }
 
                 details = "Total Amount: " + sumAmountInTzs.toString() + " TZS "  + sumAmountInUsd.toString() + " USD";
 
                 //getting report and print
                 JRBeanCollectionDataSource itemsJRBean = new JRBeanCollectionDataSource(appealDtos);
-                Map<String, Object> parameters = new HashMap<String, Object>();
+                Map<String, Object> parameters = new HashMap<>();
                 parameters.put("coat", REPORT_IMG);
                 parameters.put("dateFrom", dateFrom);
                // parameters.put("details", details);
@@ -630,7 +631,7 @@ public class ReportController {
                 return response;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            reportLogger.error("Error generating appeals report", e);
             response.setData(null);
             response.setCode(ResponseCode.FAILURE);
             response.setDescription("");
@@ -716,26 +717,26 @@ public class ReportController {
 
     @RequestMapping(value = "/notices-dates", method = RequestMethod.POST, produces = "application/json")
     @ResponseBody
-    public Page<Notice> getNoticesBetweenDates(@RequestBody Map<String, String> req) throws ParseException {
+    public Page<Notice> getNoticesBetweenDates(@RequestBody DateRangeDto req) throws ParseException {
 
 
         Pageable paging = PageRequest.of(0, 10000, Sort.by("noticeId").descending());
         SimpleDateFormat dmyFormat = new SimpleDateFormat("yyyy-MM-dd");
        return noticeRepository.findAllByLoggedAtBetween(
-               dmyFormat.parse(req.get("dateFrom")),  dmyFormat.parse(req.get("dateTo")), paging);
+               dmyFormat.parse(req.getDateFrom()),  dmyFormat.parse(req.getDateTo()), paging);
 
 
     }
 
     @RequestMapping(value = "/applications-dates", method = RequestMethod.POST, produces = "application/json")
     @ResponseBody
-    public Page<ApplicationRegister>  getApplicationsBetweenDates(@RequestBody Map<String, String> req) throws ParseException {
+    public Page<ApplicationRegister>  getApplicationsBetweenDates(@RequestBody DateRangeDto req) throws ParseException {
 
 
         Pageable paging = PageRequest.of(0, 10000, Sort.by("applicationId").descending());
         SimpleDateFormat dmyFormat = new SimpleDateFormat("yyyy-MM-dd");
         return applicationRegisterRepository.findApplicationRegistersByDateOfFillingBetween(
-                dmyFormat.parse(req.get("dateFrom")),  dmyFormat.parse(req.get("dateTo")), paging);
+                dmyFormat.parse(req.getDateFrom()),  dmyFormat.parse(req.getDateTo()), paging);
 
 
     }

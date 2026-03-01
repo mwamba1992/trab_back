@@ -6,6 +6,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import javax.xml.bind.JAXBException;
 import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
@@ -19,6 +21,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import tz.go.mof.trab.config.userextractor.LoggedUser;
 import tz.go.mof.trab.dto.bill.BillSearchDto;
 import tz.go.mof.trab.dto.report.SummonDto;
+import tz.go.mof.trab.dto.summon.CreateSummonDto;
+import tz.go.mof.trab.dto.summon.FileUploadDto;
+import tz.go.mof.trab.dto.summon.SummonIdDto;
 import tz.go.mof.trab.models.*;
 import tz.go.mof.trab.repositories.*;
 import tz.go.mof.trab.service.FinancialYearService;
@@ -31,6 +36,8 @@ import tz.go.mof.trab.utils.ResponseCode;
 @CrossOrigin(origins = {"*"})
 @RequestMapping("/summon")
 public class SummonsController {
+
+    private static final Logger log = LoggerFactory.getLogger(SummonsController.class);
 
     @Autowired
     private PaymentRepository paymentRepository;
@@ -75,37 +82,33 @@ public class SummonsController {
 
     @PostMapping(path = "/internalCreate")
     @ResponseBody
-    public Response<Summons> createSummos(@RequestBody Map<String, String> req) throws JAXBException {
+    public Response<Summons> createSummos(@RequestBody CreateSummonDto req) throws JAXBException {
         return globalMethods.createSummon(req, true);
     }
 
     @PostMapping(path = "/internalEdit")
     @ResponseBody
-    public Response<Summons> editSummon(@RequestBody Map<String, String> req) throws JAXBException {
-        System.out.println("req: " + req);
+    public Response<Summons> editSummon(@RequestBody CreateSummonDto req) throws JAXBException {
+        log.debug("Editing summon");
         return globalMethods.createSummon(req, false);
     }
 
     @PostMapping(path = "/internalDelete")
     @ResponseBody
-    public Response<Summons> deleteSummon(@RequestBody Map<String, String> req) throws JAXBException {
+    public Response<Summons> deleteSummon(@RequestBody SummonIdDto req) throws JAXBException {
 
-        Response<Summons> res = new Response<Summons>();
+        Response<Summons> res = new Response<>();
         try {
-
-            appRepo.updateAppealRemoveSummon(Long.valueOf(req.get("summonId")));
-
-            sumAppRepo.deleteSummonsAppeals(Long.valueOf(req.get("summonId")));
-            summonRepository.delete(summonRepository.findById(Long.valueOf(req.get("summonId"))).get());
+            appRepo.updateAppealRemoveSummon(Long.valueOf(req.getSummonId()));
+            sumAppRepo.deleteSummonsAppeals(Long.valueOf(req.getSummonId()));
+            summonRepository.delete(summonRepository.findById(Long.valueOf(req.getSummonId())).get());
             res.setStatus(true);
             res.setCode(ResponseCode.SUCCESS);
-
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error deleting summon", e);
             res.setStatus(false);
             res.setCode(ResponseCode.FAILURE);
             res.setDescription("Unable To Delete Summon");
-
         }
 
         return res;
@@ -114,24 +117,23 @@ public class SummonsController {
     @PostMapping(path = "/uploadFile/{id}")
     @ResponseBody
     public Response<Summons> uploadFile(@PathVariable("id") Long id,
-                                        @RequestBody Map<String, String> req) throws JAXBException {
+                                        @RequestBody FileUploadDto req) throws JAXBException {
         Summons summon = summonRepository.findById(id).get();
 
-        Response<Summons> res = new Response<Summons>();
+        Response<Summons> res = new Response<>();
 
-        System.out.println("#########" + req);
+        log.debug("Uploading file for summon: {}", id);
         try {
-            summon.setFilePath(req.get("fileName"));
+            summon.setFilePath(req.getFileName());
             summon.setReceived(true);
             summon.setReceivedAt(new Date());
             summonRepository.save(summon);
 
             String filePath = "";
             String binaryData = "";
-            if (req.get("file") != null) {
-                //check if LocationSketch available then upload
-                binaryData = req.get("file");
-                filePath = req.get("fileName");
+            if (req.getFile() != null) {
+                binaryData = req.getFile();
+                filePath = req.getFileName();
 
             }
 
@@ -181,7 +183,7 @@ public class SummonsController {
         SimpleDateFormat dFormat = new SimpleDateFormat("yyyy-MM-dd");
         SimpleDateFormat dateFor = new SimpleDateFormat("dd MMMM yyyy");
 
-        List<SummonDto> summonDtoList = new ArrayList<SummonDto>();
+        List<SummonDto> summonDtoList = new ArrayList<>();
         globalMethods.getSummonDtos(summonsList, dateFor, summonDtoList);
         return  summonDtoList;
 
@@ -210,7 +212,7 @@ public class SummonsController {
     @GetMapping(path = "/change-judge/{summonId}/{judgeId}")
     @ResponseBody
     public Response changeJudge(@PathVariable Long summonId, @PathVariable String judgeId) {
-        System.out.println("summonId: " + summonId + " judgeId: " + judgeId);
+        log.debug("Changing judge for summon: {} to judge: {}", summonId, judgeId);
         return summonsService.changeJudge(summonId, judgeId);
     }
 

@@ -29,7 +29,7 @@ public class ColumnMapperServiceiImpl implements ColumnMapperService {
 
     @Override
     public Response<ColumnMapper> saveMapping(ColumnMapperDto mapperDto) {
-        Response<ColumnMapper> response = new Response<ColumnMapper>();
+        Response<ColumnMapper> response = new Response<>();
         try {
             ColumnMapper mapper = new ColumnMapper();
             TrabHelper.copyNonNullProperties(mapperDto, mapper);
@@ -51,7 +51,7 @@ public class ColumnMapperServiceiImpl implements ColumnMapperService {
     @Override
     public Response<ColumnMapper> editMapping(ColumnMapperDto columnMapperDto, String id) {
 
-        Response<ColumnMapper> response = new Response<ColumnMapper>();
+        Response<ColumnMapper> response = new Response<>();
         try {
             ColumnMapper mapper = findMapperById(id);
             TrabHelper.copyNonNullProperties(columnMapperDto, mapper);
@@ -72,11 +72,11 @@ public class ColumnMapperServiceiImpl implements ColumnMapperService {
 
     @Override
     public ListResponse<ColumnMapper> findAll() {
-        ListResponse<ColumnMapper> response = new ListResponse<ColumnMapper>();
+        ListResponse<ColumnMapper> response = new ListResponse<>();
         try {
             List<ColumnMapper> mapperList = mapperRepository.findAllByDeletedFalseAndActiveTrue();
 
-            if (mapperList.size() > 0) {
+            if (!mapperList.isEmpty()) {
                 response.setData(mapperList);
                 response.setCode(ResponseCode.SUCCESS);
                 response.setStatus(true);

@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.*;
 import org.apache.log4j.*;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.*;
 import tz.go.mof.trab.config.userextractor.LoggedUser;
 import tz.go.mof.trab.models.Currency;
@@ -21,6 +22,10 @@ import tz.go.mof.trab.models.*;
 import java.text.*;
 import javax.xml.bind.*;
 import org.springframework.web.bind.annotation.*;
+import tz.go.mof.trab.dto.application.CreateApplicationDto;
+import tz.go.mof.trab.dto.application.EditApplicationDto;
+import tz.go.mof.trab.dto.application.UpdateServedByDto;
+import tz.go.mof.trab.dto.report.DateRangeDto;
 import tz.go.mof.trab.utils.Response;
 import java.util.*;
 
@@ -28,6 +33,7 @@ import java.util.*;
 @CrossOrigin(origins = {"*"})
 @RequestMapping({"/application"})
 public class ApplicationController {
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(ApplicationController.class);
     private static final Logger billLogger;
 
     @Autowired
@@ -64,6 +70,8 @@ public class ApplicationController {
     private String gepgCode;
     @Value("${tz.go.trab.gepgurl}")
     private String gepgUrl;
+    @Value("${tz.go.trab.email.commissioner}")
+    private String commissionerEmail;
     @Autowired
     GlobalMethods globalMethods;
     private Date billExpireDate;
@@ -133,8 +141,22 @@ public class ApplicationController {
 
     @PostMapping(path = {"/internalCreate"})
     @ResponseBody
-    public Response<ApplicationRegister> createUSer(@RequestBody final Map<String, String> req) throws JAXBException {
-        Response<ApplicationRegister> res = new Response<ApplicationRegister>();
+    public Response<ApplicationRegister> createUSer(@RequestBody final CreateApplicationDto dto) throws JAXBException {
+        // Convert DTO to Map for internal processing
+        Map<String, String> req = new HashMap<>();
+        req.put("type", dto.getType() != null ? dto.getType() : "");
+        req.put("email", dto.getEmail() != null ? dto.getEmail() : "");
+        req.put("phone", dto.getPhone() != null ? dto.getPhone() : "");
+        req.put("appeleantName", dto.getAppeleantName() != null ? dto.getAppeleantName() : "");
+        req.put("applicationType", dto.getApplicationType() != null ? dto.getApplicationType() : "");
+        req.put("natureOf", dto.getNatureOf() != null ? dto.getNatureOf() : "");
+        req.put("remarks", dto.getRemarks() != null ? dto.getRemarks() : "");
+        req.put("tax", dto.getTax() != null ? dto.getTax() : "");
+        req.put("slp", dto.getSlp() != null ? dto.getSlp() : "");
+        req.put("region", dto.getRegion() != null ? dto.getRegion() : "");
+        req.put("annextures", dto.getAnnextures() != null ? dto.getAnnextures() : "");
+
+        Response<ApplicationRegister> res = new Response<>();
 
         Currency currency = currencyService.findByCurrencyShortName("TZS");
         Appellant appealant = new Appellant();
@@ -160,7 +182,7 @@ public class ApplicationController {
 
 
                 appealant.setCreatedDate(new Date());
-                appealant.setEmail("comm@genereal.com");
+                appealant.setEmail(commissionerEmail);
                 appealant.setFirstName("Commisioner General");
                 appealant.setPhoneNumber("XXX-XXX-XXXX");
 
@@ -173,7 +195,7 @@ public class ApplicationController {
 
 
                 respondent.setCreatedDate(new Date());
-                respondent.setEmailAdress("comm@genereal.com");
+                respondent.setEmailAdress(commissionerEmail);
                 respondent.setName("Commisioner General");
                 respondent.setTinNumber("XXX-XXX-XXX");
                 respondent.setPhoneNumber("XXX-XXX-XXXX");
@@ -258,13 +280,11 @@ public class ApplicationController {
                 Adress adress = new Adress();
                 adress.setSlp(req.get("slp"));
 
-                System.out.println("last id: " + adressRepository.findLastUsedId());
                 adress.setAdressId(adressRepository.findLastUsedId() + 1);
                 Region region = regionService.getRegionByCode(req.get("region")).getData();
                 adress.setRegion(region);
 
-                System.out.println("address object: ");
-                TrabHelper.print(adress);
+                log.debug("Saving address for application");
 
                 register.setAdressId(adressRepository.save(adress));
                 register.setApplicationType(req.get("applicationType"));
@@ -376,7 +396,7 @@ public class ApplicationController {
 
             }
         } catch (Exception e2) {
-            e2.printStackTrace();
+            log.error("Error sending request to gepg", e2);
             res.setDescription("Errors sending requests to gepg");
             res.setStatus(false);
             res.setCode(ResponseCode.FAILURE);
@@ -459,66 +479,55 @@ public class ApplicationController {
 
     @PostMapping({"/internalEdit"})
     @ResponseBody
-    public Response<ApplicationRegister> editUser(@RequestBody final Map<String, String> req) {
+    public Response<ApplicationRegister> editUser(@RequestBody final EditApplicationDto dto) {
 
-        System.out.println("##########" + req);
+        log.debug("Editing application");
 
-
-        Response<ApplicationRegister> res = new Response<ApplicationRegister>();
+        Response<ApplicationRegister> res = new Response<>();
         try {
+            TaxType taxType = taxTypeRepository.findTaxTypeByTaxName(dto.getTax());
 
-            TaxType taxType =  taxTypeRepository.findTaxTypeByTaxName(req.get("tax"));
-
-            final ApplicationRegister app = this.appRepo.findByapplicationNoAndTaxesId((String) req.get("appNo"), taxType.getId());
-            app.setWonBy(req.get("wonBy"));
-            app.setDecideBy((String) req.get("decidedBy"));
-            app.setDesicionSummary(req.get("remarks").getBytes());
-            app.setRemarks((String) req.get("remarks"));
-            app.setStatusTrend(statusRepo.findApplicationStatusTrendByApplicationStatusTrendName(req.get("statusTrend")));
-
+            final ApplicationRegister app = this.appRepo.findByapplicationNoAndTaxesId(dto.getAppNo(), taxType.getId());
+            app.setWonBy(dto.getWonBy());
+            app.setDecideBy(dto.getDecidedBy());
+            app.setDesicionSummary(dto.getRemarks() != null ? dto.getRemarks().getBytes() : null);
+            app.setRemarks(dto.getRemarks());
+            app.setStatusTrend(statusRepo.findApplicationStatusTrendByApplicationStatusTrendName(dto.getStatusTrend()));
 
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 
-
-            app.setDateOfDecision(formatter.parse(req.get("date").split("T")[0]));
-            app.setFilePath(req.get("fileName"));
+            app.setDateOfDecision(formatter.parse(dto.getDate().split("T")[0]));
+            app.setFilePath(dto.getFileName());
             app.setAction("2");
             app.setCreatedBy(loggedUser.getInfo().getName());
 
-
             String filePath = "";
             String binaryData = "";
-            if (req.get("file") != null) {
-                //check if LocationSketch available then upload
-                binaryData = req.get("file");
-                filePath = req.get("fileName");
-
+            if (dto.getFile() != null) {
+                binaryData = dto.getFile();
+                filePath = dto.getFileName();
             }
 
             if (!new File(uploadingDir).exists()) {
-                boolean success = new File(uploadingDir).mkdirs();
-                if (!success) {
-                }
+                new File(uploadingDir).mkdirs();
             }
 
             File fileToCreate = new File(uploadingDir, filePath);
-
 
             if (!fileToCreate.exists()) {
                 byte[] decodedBytes = Base64.getDecoder().decode(binaryData);
                 FileUtils.writeByteArrayToFile(fileToCreate, decodedBytes);
             }
 
-
             appRepo.save(app);
             res.setStatus(true);
-            res.setDescription("Error occurred while editing Appeal");
+            res.setDescription("Application updated successfully");
             res.setCode(ResponseCode.SUCCESS);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error editing application", e);
             res.setStatus(false);
             res.setCode(ResponseCode.FAILURE);
-            res.setDescription("Error occurred  while editing Appeal");
+            res.setDescription("Error occurred while editing application");
         }
         return res;
     }
@@ -541,70 +550,66 @@ public class ApplicationController {
 
     @PostMapping(path = "/update-served-by", produces = "application/json")
     @ResponseBody
-    public Response<ApplicationServedBy> updateServedBy(@RequestBody Map<String, String> req) throws IllegalStateException, IOException {
+    public Response<ApplicationServedBy> updateServedBy(@RequestBody UpdateServedByDto dto) throws IllegalStateException, IOException {
 
-        System.out.println("#### Req is ###### " + req);
+        log.debug("Updating served by for application: {}", dto.getAppNo());
 
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 
-        Response<ApplicationServedBy> appealsResponse = new Response<ApplicationServedBy>();
-        try{
-
-            ApplicationRegister applicationRegister = appRepo.findByapplicationNo(req.get("appNo"));
+        Response<ApplicationServedBy> appealsResponse = new Response<>();
+        try {
+            ApplicationRegister applicationRegister = appRepo.findByapplicationNo(dto.getAppNo());
             applicationRegister.setAction("2");
             applicationRegister.setCreatedBy(loggedUser.getInfo().getName());
 
             ApplicationServedBy applicationServedBy = new ApplicationServedBy();
-            applicationServedBy.setAppName(req.get("appName"));
-            applicationServedBy.setAppPhone(req.get("appPhone"));
-            applicationServedBy.setAppDate(formatter.parse(req.get("appDate").split("T")[0]));
+            applicationServedBy.setAppName(dto.getAppName());
+            applicationServedBy.setAppPhone(dto.getAppPhone());
+            applicationServedBy.setAppDate(formatter.parse(dto.getAppDate().split("T")[0]));
 
-            applicationServedBy.setResoName(req.get("resoName"));
-            applicationServedBy.setResoPhone(req.get("resoPhone"));
-            applicationServedBy.setResoDate(formatter.parse(req.get("resoDate").split("T")[0]));
+            applicationServedBy.setResoName(dto.getResoName());
+            applicationServedBy.setResoPhone(dto.getResoPhone());
+            applicationServedBy.setResoDate(formatter.parse(dto.getResoDate().split("T")[0]));
 
             ApplicationServedBy newApplicationServedBy = applicationServedByRepository.save(applicationServedBy);
 
             applicationRegister.setApplicationServedBy(newApplicationServedBy);
             appRepo.save(applicationRegister);
 
-            appealsResponse.setDescription("Succefull");
+            appealsResponse.setDescription("Successful");
             appealsResponse.setStatus(true);
             appealsResponse.setCode(ResponseCode.SUCCESS);
             appealsResponse.setData(applicationServedBy);
 
-        }catch (Exception e){
-            e.printStackTrace();
+        } catch (Exception e) {
+            log.error("Error updating served by", e);
             appealsResponse.setCode(ResponseCode.FAILURE);
             appealsResponse.setStatus(false);
             appealsResponse.setData(null);
-            appealsResponse.setDescription("System Temporary unavailable");
-
+            appealsResponse.setDescription("System temporarily unavailable");
         }
         return appealsResponse;
     }
 
     @PostMapping(path = "/applications-date", produces = "application/json")
     @ResponseBody
-    public Page<ApplicationRegister> getAppealsByDateRange(@RequestBody Map<String, String> req) throws IllegalStateException {
-
-        TrabHelper.print(req);
+    public Page<ApplicationRegister> getAppealsByDateRange(@RequestBody tz.go.mof.trab.dto.report.ApplicationFilterDto req) throws IllegalStateException {
 
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
         Pageable pageable = PageRequest.of(0, 10000, Sort.by("appealId").descending());
         Date start = null;
         Date end = null;
         try {
-            start = formatter.parse(req.get("dateFrom").split("T")[0]);
-            end = formatter.parse(req.get("dateTo").split("T")[0]);
+            start = formatter.parse(req.getDateFrom().split("T")[0]);
+            end = formatter.parse(req.getDateTo().split("T")[0]);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error parsing date range", e);
         }
 
-        if(req.get("tax") == null || req.get("tax").isEmpty())
+        if(req.getTax() == null || req.getTax().isEmpty())
             return  applicationRegisterRepository.findApplicationRegisterByDateOfFillingBetween(start, end, pageable);
         else{
-            return applicationRegisterRepository.findApplicationRegisterByDateOfFillingBetweenAndTaxes_Id(start, end, req.get("tax"), pageable);
+            return applicationRegisterRepository.findApplicationRegisterByDateOfFillingBetweenAndTaxes_Id(start, end, req.getTax(), pageable);
         }
 
     }

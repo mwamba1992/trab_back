@@ -22,4 +22,5 @@ public class EditApplicationDto {
     private String date;
     private String fileName;
     private String file;      // Base64 encoded file content
+    private String aggregatedApplications; // JSON array string of consolidated application numbers
 }

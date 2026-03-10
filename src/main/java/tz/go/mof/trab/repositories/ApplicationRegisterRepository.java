@@ -46,5 +46,7 @@ public interface ApplicationRegisterRepository  extends PagingAndSortingReposito
 	@Query(value = "SELECT ap FROM ApplicationRegister ap WHERE ap.applicationNo like %:region%  AND ap.dateOfFilling  between :startDate AND :endDate  AND ap.dateOfDecision is not null")
 	List<ApplicationRegister> getApplicationRegisters(String region, @Param("startDate") @DateTimeFormat(pattern = "yyyy-MM-dd") Date startDate, @Param("endDate") @DateTimeFormat(pattern = "yyyy-MM-dd") Date endDate);
 
+	@Query(value = "SELECT ap FROM ApplicationRegister ap WHERE (:region IS NULL OR :region = '' OR ap.applicationNo LIKE %:region%) AND (:taxType IS NULL OR :taxType = '' OR ap.taxes.id = :taxType) AND ap.dateOfFilling BETWEEN :startDate AND :endDate AND ap.dateOfDecision IS NOT NULL")
+	List<ApplicationRegister> getApplicationsForTrat(@Param("region") String region, @Param("taxType") String taxType, @Param("startDate") @DateTimeFormat(pattern = "yyyy-MM-dd") Date startDate, @Param("endDate") @DateTimeFormat(pattern = "yyyy-MM-dd") Date endDate);
 
 }

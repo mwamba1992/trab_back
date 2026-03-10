@@ -21,6 +21,7 @@ import tz.go.mof.trab.models.*;
 
 import java.text.*;
 import javax.xml.bind.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.bind.annotation.*;
 import tz.go.mof.trab.dto.application.CreateApplicationDto;
 import tz.go.mof.trab.dto.application.EditApplicationDto;
@@ -520,6 +521,46 @@ public class ApplicationController {
             }
 
             appRepo.save(app);
+
+            // Process aggregated/consolidated applications
+            if (dto.getAggregatedApplications() != null && !dto.getAggregatedApplications().isEmpty()) {
+                ObjectMapper mapper = new ObjectMapper();
+                List<String> aggregatedAppNos = mapper.readValue(dto.getAggregatedApplications(), new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+
+                for (String aggAppNo : aggregatedAppNos) {
+                    if (aggAppNo.equals(dto.getAppNo())) {
+                        continue;
+                    }
+
+                    ApplicationRegister aggApp = appRepo.findByapplicationNo(aggAppNo);
+                    if (aggApp == null) {
+                        log.warn("Aggregated application not found for appNo: {}", aggAppNo);
+                        continue;
+                    }
+
+                    aggApp.setWonBy(dto.getWonBy());
+                    aggApp.setDecideBy(dto.getDecidedBy());
+                    aggApp.setDesicionSummary(dto.getRemarks() != null ? dto.getRemarks().getBytes() : null);
+                    aggApp.setRemarks(dto.getRemarks());
+                    aggApp.setStatusTrend(statusRepo.findApplicationStatusTrendByApplicationStatusTrendName(dto.getStatusTrend()));
+                    aggApp.setDateOfDecision(formatter.parse(dto.getDate().split("T")[0]));
+                    aggApp.setAction("2");
+                    aggApp.setCreatedBy(loggedUser.getInfo().getName());
+
+                    if (dto.getFile() != null && !dto.getFile().isEmpty()) {
+                        String aggFilePath = "Application_" + aggAppNo + ".pdf";
+                        aggApp.setFilePath(aggFilePath);
+
+                        File aggFileToCreate = new File(uploadingDir, aggFilePath);
+                        byte[] aggDecodedBytes = Base64.getDecoder().decode(dto.getFile());
+                        FileUtils.writeByteArrayToFile(aggFileToCreate, aggDecodedBytes);
+                    }
+
+                    appRepo.save(aggApp);
+                    log.debug("Aggregated application {} decision updated", aggAppNo);
+                }
+            }
+
             res.setStatus(true);
             res.setDescription("Application updated successfully");
             res.setCode(ResponseCode.SUCCESS);
